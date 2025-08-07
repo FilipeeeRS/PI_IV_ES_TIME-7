@@ -1,5 +1,5 @@
 # PI_IV_ES_TIME-7
-PROJETO INTEGRADOR 4 / PUC CAMPINAS / Engenharia de Software / Agosto a2025
+PROJETO INTEGRADOR 4 / PUC CAMPINAS / Engenharia de Software / Agosto 2025
 
 Integrantes: 
 
