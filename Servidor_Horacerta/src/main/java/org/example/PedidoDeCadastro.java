@@ -6,8 +6,9 @@ public class PedidoDeCadastro extends Comunicado
     private String nome;
     private String login;
     private String senha;
+    private String funcao;
 
-    public PedidoDeCadastro(String nome, String login, String senha)
+    public PedidoDeCadastro(String nome, String login, String senha, String funcao)
     {
         if (nome == null || nome.isBlank())
             throw new IllegalArgumentException("nome inválido");
@@ -18,14 +19,19 @@ public class PedidoDeCadastro extends Comunicado
         if (senha == null || senha.isBlank())
             throw new IllegalArgumentException("senha inválida");
 
+        if ( funcao == null || funcao.isBlank())
+            throw new IllegalArgumentException("funcao invalida");
+
         this.nome  = nome;
         this.login = login;
         this.senha = senha;
+        this.funcao = funcao;
     }
 
     public String getNome()  { return nome;  }
     public String getLogin() { return login; }
-    public String getSenha() { return senha; } // se preferir, não exponha a senha
+    public String getSenha() { return senha; }
+    public String getFuncao(){ return funcao;}
 
     @Override
     public String toString()
@@ -34,7 +40,8 @@ public class PedidoDeCadastro extends Comunicado
         return "PedidoDeCadastro{" +
                 "nome='" + this.nome + '\'' +
                 ", login='" + this.login + '\'' +
-                ", senha='***'" +
+                ", senha='***'" + '\'' +
+                ", funcao='" + this.funcao + '\'' +
                 '}';
     }
 }

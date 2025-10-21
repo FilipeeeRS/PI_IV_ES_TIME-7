@@ -26,9 +26,11 @@ public class Cliente {
             String login = scanner.nextLine();
             System.out.print("Senha: ");
             String senha = scanner.nextLine();
+            System.out.print("Funcao: ");
+            String funcao = scanner.nextLine();
 
             // envia o pedido
-            PedidoDeCadastro pedido = new PedidoDeCadastro(nome, login, senha);
+            PedidoDeCadastro pedido = new PedidoDeCadastro(nome, login, senha, funcao);
             transmissor.writeObject(pedido);
             transmissor.flush();
 

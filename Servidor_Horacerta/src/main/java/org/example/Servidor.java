@@ -5,8 +5,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class Servidor {
 
-    public static final java.util.concurrent.ConcurrentHashMap<String,String> CADASTROS =
-            new java.util.concurrent.ConcurrentHashMap<>();
+
     public static String PORTA_PADRAO = "3000";
 
     public static void main(String[] args) {
