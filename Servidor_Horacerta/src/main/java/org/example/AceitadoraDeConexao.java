@@ -1,36 +1,61 @@
 package org.example;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.util.ArrayList;
+import java.net.*;
+import java.util.*;
 
-public class AceitadoraDeConexao extends Thread{
-    private final int porta;
-    private final ArrayList<Parceiro> usuarios;
+import org.example.SupervisoraDeConexao;
 
-    public AceitadoraDeConexao(String porta, ArrayList<Parceiro> usuarios){
-        this.porta = Integer.parseInt(porta);
+public class AceitadoraDeConexao extends Thread
+{
+    private ServerSocket        pedido;
+    private ArrayList<Parceiro> usuarios;
+
+    public AceitadoraDeConexao
+            (String porta, ArrayList<Parceiro> usuarios)
+            throws Exception
+    {
+        if (porta==null)
+            throw new Exception ("Porta ausente");
+
+        try
+        {
+            this.pedido =
+                    new ServerSocket (Integer.parseInt(porta), 0, InetAddress.getByName("0.0.0.0"));
+        }
+        catch (Exception  erro)
+        {
+            throw new Exception ("Porta invalida");
+        }
+
+        if (usuarios==null)
+            throw new Exception ("Usuarios ausentes");
+
         this.usuarios = usuarios;
     }
-    @Override
-    public void run(){
-        try(ServerSocket servidor = new ServerSocket(porta)) {
-            System.out.println("[SERVIDOR] Ouvindo na porta" + porta + "...");
-            for (;;){
-                Socket conexao = servidor.accept();
-                System.out.println("[SERVIDOR] Nova conexao: " + conexao.getRemoteSocketAddress());
 
-                ObjectOutputStream oos = new ObjectOutputStream(conexao.getOutputStream());
-                ObjectInputStream ois = new ObjectInputStream(conexao.getInputStream());
-
-                new SupervisoraDeConexao(conexao, usuarios, oos, ois).start();
+    public void run ()
+    {
+        for(;;)
+        {
+            Socket conexao=null;
+            try
+            {
+                conexao = this.pedido.accept();
+            }
+            catch (Exception erro)
+            {
+                continue;
             }
 
-        }catch (Exception e){
-            System.err.println("[SERVIDOR] Erro na aceitadora: " + e);
-            e.printStackTrace();
+            SupervisoraDeConexao supervisoraDeConexao=null;
+            try
+            {
+                supervisoraDeConexao =
+                        new SupervisoraDeConexao (conexao, usuarios);
+            }
+            catch (Exception erro)
+            {} // sei que passei parametros corretos para o construtor
+            supervisoraDeConexao.start();
         }
     }
 }
