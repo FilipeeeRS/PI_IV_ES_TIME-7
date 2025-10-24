@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Aplicativo_HoraCerta</string>
+    <string name="title_activity_inicio_tela">InicioTelaActivity</string>
 </resources>

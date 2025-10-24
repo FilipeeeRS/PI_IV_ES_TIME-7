@@ -13,6 +13,20 @@
         android:theme="@style/Theme.Aplicativo_HoraCerta"
         tools:targetApi="31">
         <activity
+            android:name=".InicioTelaActivity"
+            android:exported="false"
+            android:label="@string/title_activity_inicio_tela"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
+            android:name=".SelecionarUsuarioActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FazerRegistroActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FazerLoginActivity"
+            android:exported="false" />
+        <activity
             android:name=".MainActivity"
             android:exported="true">
             <intent-filter>
