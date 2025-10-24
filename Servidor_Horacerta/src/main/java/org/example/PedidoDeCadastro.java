@@ -16,7 +16,6 @@ public class PedidoDeCadastro extends ComunicadoJson {
     private String email;
 
     private String senha;
-    private String funcao;
 
     // Gerados automaticamente no servidor
     private String uid;
@@ -34,7 +33,7 @@ public class PedidoDeCadastro extends ComunicadoJson {
 
     public boolean criarDocumento() {
         try {
-            if (isBlank(nome) || isBlank(email) || isBlank(senha) || isBlank(funcao))
+            if (isBlank(nome) || isBlank(email) || isBlank(senha) )
                 throw new IllegalArgumentException("Campos obrigatórios ausentes");
 
             gerarIds();
@@ -51,7 +50,6 @@ public class PedidoDeCadastro extends ComunicadoJson {
                         .append("nome", nome)
                         .append("email", email)
                         .append("senha", senha)     // 👈 agora a senha também é salva
-                        .append("funcao", funcao)
                         .append("codigo", codigo);
 
                 col.insertOne(doc);

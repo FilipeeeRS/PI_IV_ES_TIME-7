@@ -68,8 +68,7 @@ public class PedidoDeLogin extends ComunicadoJson {
                     doc.getObjectId("_id").toHexString(),
                     doc.getString("uid"),
                     doc.getString("nome"),
-                    doc.getString("email"),
-                    doc.getString("funcao")
+                    doc.getString("email")
             );
         } catch (Exception e) {
             e.printStackTrace();

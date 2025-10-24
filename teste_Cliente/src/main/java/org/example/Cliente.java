@@ -35,10 +35,9 @@ public class Cliente {
                     String login = teclado.nextLine();
                     System.out.print("Senha: ");
                     String senha = teclado.nextLine();
-                    System.out.print("Função: ");
-                    String funcao = teclado.nextLine();
 
-                    PedidoDeCadastro pedido = new PedidoDeCadastro(nome, login, senha, funcao);
+
+                    PedidoDeCadastro pedido = new PedidoDeCadastro(nome, login, senha);
                     servidor.receba(pedido);
 
                     Object resposta = servidor.envie();
