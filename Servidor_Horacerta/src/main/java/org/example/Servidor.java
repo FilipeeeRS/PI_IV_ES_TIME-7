@@ -1,14 +1,18 @@
 package org.example;
 
+import org.example.AceitadoraDeConexao;
+import org.example.ComunicadoDeDesligamento;
+import org.example.Parceiro;
+import org.example.Teclado;
+
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
-public class Servidor {
-
-
+public class Servidor
+{
     public static String PORTA_PADRAO = "3000";
 
-    public static void main(String[] args) {
+    public static void main (String[] args)
+    {
         if (args.length>1)
         {
             System.err.println ("Uso esperado: java Servidor [PORTA]\n");
@@ -36,37 +40,44 @@ public class Servidor {
             return;
         }
 
-        for(;;) {
-            System.out.println("O servidor esta ativo! Para desativa-lo,");
-            System.out.println("use o comando \"desativar\"\n");
-            System.out.print("> ");
+        for(;;)
+        {
+            System.out.println ("O servidor esta ativo! Para desativa-lo,");
+            System.out.println ("use o comando \"desativar\"\n");
+            System.out.print   ("> ");
 
-            String comando = null;
-            try {
+            String comando=null;
+            try
+            {
                 comando = Teclado.getUmString();
-            } catch (Exception erro) {
             }
+            catch (Exception erro)
+            {}
 
-            if (comando.toLowerCase().equals("desativar")) {
-                synchronized (usuarios) {
+            if (comando.toLowerCase().equals("desativar"))
+            {
+                synchronized (usuarios)
+                {
                     ComunicadoDeDesligamento comunicadoDeDesligamento =
-                            new ComunicadoDeDesligamento();
+                            new ComunicadoDeDesligamento ();
 
-                    for (Parceiro usuario : usuarios) {
-                        try {
-                            usuario.receba(comunicadoDeDesligamento);
-                            usuario.adeus();
-                        } catch (Exception erro) {
+                    for (Parceiro usuario:usuarios)
+                    {
+                        try
+                        {
+                            usuario.receba (comunicadoDeDesligamento);
+                            usuario.adeus  ();
                         }
+                        catch (Exception erro)
+                        {}
                     }
                 }
 
-                System.out.println("O servidor foi desativado!\n");
+                System.out.println ("O servidor foi desativado!\n");
                 System.exit(0);
-            } else
-                System.err.println("Comando invalido!\n");
-
+            }
+            else
+                System.err.println ("Comando invalido!\n");
         }
     }
 }
-
