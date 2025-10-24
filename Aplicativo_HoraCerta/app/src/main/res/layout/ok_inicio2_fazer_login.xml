@@ -11,7 +11,7 @@
     android:layout_width="0dp"
     android:layout_height="0dp"
     android:scaleType="centerCrop"
-    android:src="@drawable/fundo"
+    android:src="@drawable/ic_launcher_background"
     app:layout_constraintTop_toTopOf="parent"
     app:layout_constraintBottom_toBottomOf="parent"
     app:layout_constraintStart_toStartOf="parent"
@@ -37,7 +37,7 @@
         android:layout_height="150dp"
         android:layout_marginTop="50dp"
         android:contentDescription="@string/app_name"
-        android:src="@drawable/logo_transparente"
+        android:src="@drawable/ic_launcher_foreground"
         app:layout_constraintTop_toTopOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
@@ -46,7 +46,7 @@
         android:id="@+id/welcomeText"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="HoraCerta\nFazer Registro"
+        android:text="HoraCerta\nFazer Login"
         android:textAlignment="center"
         android:textColor="@android:color/white"
         android:textSize="35sp"
@@ -57,12 +57,12 @@
         android:layout_marginTop="10dp" />
 
     <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilName"
+        android:id="@+id/tilEmail"
         style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
-        android:hint="Nome:"
+        android:layout_marginTop="50dp"
+        android:hint="Email:"
         app:boxBackgroundColor="@android:color/white"
         app:boxCornerRadiusTopStart="24dp"
         app:boxCornerRadiusTopEnd="24dp"
@@ -76,37 +76,7 @@
         app:layout_constraintWidth_percent="0.8">
 
         <com.google.android.material.textfield.TextInputEditText
-            android:id="@+id/etName"
-            android:textSize="16sp"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:inputType="textPersonName"
-            android:textColor="@android:color/black"/>
-
-    </com.google.android.material.textfield.TextInputLayout>
-
-    <com.google.android.material.textfield.TextInputLayout
-        android:id="@+id/tilEmail"
-        style="@style/Widget.MaterialComponents.TextInputLayout.FilledBox"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:hint="Email:"
-        app:boxBackgroundColor="@android:color/white"
-        app:boxCornerRadiusTopStart="24dp"
-        app:boxCornerRadiusTopEnd="24dp"
-        app:boxCornerRadiusBottomStart="24dp"
-        app:boxCornerRadiusBottomEnd="24dp"
-        app:boxStrokeWidth="0dp"
-        app:boxStrokeWidthFocused="0dp"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@id/tilName"
-        app:layout_constraintWidth_percent="0.8">
-
-        <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etEmail"
-            android:textSize="16sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textEmailAddress"
@@ -136,7 +106,6 @@
 
         <com.google.android.material.textfield.TextInputEditText
             android:id="@+id/etPassword"
-            android:textSize="16sp"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:inputType="textPassword"
