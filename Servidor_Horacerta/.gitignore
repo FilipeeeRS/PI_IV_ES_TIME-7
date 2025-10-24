@@ -4,8 +4,7 @@
 *.env
 
 
-src/main/java/org/example/PedidoDeLogin.java
-src/main/java/org/example/PedidoDeCadastro.java
+
 
 
 .gradle

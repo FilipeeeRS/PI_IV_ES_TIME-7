@@ -1,6 +1,6 @@
 package org.example;
 
-public class PedidoDeCadastro extends Comunicado {
+public class PedidoDeCadastro extends ComunicadoJson {
     private static final long serialVersionUID = 1L;
 
     private final String nome;
@@ -9,11 +9,12 @@ public class PedidoDeCadastro extends Comunicado {
     private final String funcao;
 
     public PedidoDeCadastro(String nome, String login, String senha, String funcao) {
+        super("Cadastro");
 
         if (nome == null || nome.isBlank())  throw new IllegalArgumentException("Nome inválido");
         if (login == null || login.isBlank())throw new IllegalArgumentException("Login inválido");
         if (senha == null || senha.isBlank())throw new IllegalArgumentException("Senha inválida");
-        if (funcao == null || funcao.isBlank())throw new IllegalArgumentException("Funcao inválida");
+        if (funcao == null || funcao.isBlank())throw new IllegalArgumentException("Função inválida");
 
         this.nome = nome;
         this.login = login;
@@ -21,8 +22,8 @@ public class PedidoDeCadastro extends Comunicado {
         this.funcao = funcao;
     }
 
-    public String getNome()  { return nome; }
-    public String getLogin() { return login; }
-    public String getSenha() { return senha; }
+    public String getNome()   { return nome; }
+    public String getLogin()  { return login; }
+    public String getSenha()  { return senha; }
     public String getFuncao() { return funcao; }
 }

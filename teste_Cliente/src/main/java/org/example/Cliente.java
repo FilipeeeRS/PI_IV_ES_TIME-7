@@ -1,58 +1,68 @@
 package org.example;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import java.io.*;
 import java.net.Socket;
 import java.util.Scanner;
 
 public class Cliente {
     public static void main(String[] args) {
-        String host = "127.0.0.1"; // ou IP da máquina do servidor
-        int porta = 3000;          // mesma porta configurada no servidor
+        try (Socket conexao = new Socket("localhost", 3000)) {
 
-        try (Socket socket = new Socket(host, porta)) {
-            System.out.println("[CLIENTE] Conectado ao servidor " + host + ":" + porta);
+            BufferedWriter transmissor = new BufferedWriter(new OutputStreamWriter(conexao.getOutputStream()));
+            BufferedReader receptor = new BufferedReader(new InputStreamReader(conexao.getInputStream()));
 
-            // IMPORTANTE: saída antes da entrada
-            ObjectOutputStream transmissor = new ObjectOutputStream(socket.getOutputStream());
-            ObjectInputStream  receptor    = new ObjectInputStream(socket.getInputStream());
+            Parceiro servidor = new Parceiro(conexao, receptor, transmissor);
 
-            Scanner scanner = new Scanner(System.in);
+            System.out.println("Conectado ao servidor em localhost:3000");
+            System.out.println("Digite uma opcao: login | cadastro | sair");
 
-            // Interface simples
-            System.out.print("Nome: ");
-            String nome = scanner.nextLine();
-            System.out.print("Login: ");
-            String login = scanner.nextLine();
-            System.out.print("Senha: ");
-            String senha = scanner.nextLine();
-            System.out.print("Funcao: ");
-            String funcao = scanner.nextLine();
+            Scanner teclado = new Scanner(System.in);
 
-            // envia o pedido
-            PedidoDeCadastro pedido = new PedidoDeCadastro(nome, login, senha, funcao);
-            transmissor.writeObject(pedido);
-            transmissor.flush();
+            while (true) {
+                System.out.print("> ");
+                String comando = teclado.nextLine();
 
-            System.out.println("[CLIENTE] Pedido enviado. Aguardando resposta...");
+                if (comando.equalsIgnoreCase("sair")) {
+                    servidor.receba(new PedidoParaSair());
+                    servidor.adeus();
+                    System.out.println("Você saiu do servidor.");
+                    break;
+                }
+                else if (comando.equalsIgnoreCase("cadastro")) {
+                    System.out.print("Nome: ");
+                    String nome = teclado.nextLine();
+                    System.out.print("Login (email): ");
+                    String login = teclado.nextLine();
+                    System.out.print("Senha: ");
+                    String senha = teclado.nextLine();
+                    System.out.print("Função: ");
+                    String funcao = teclado.nextLine();
 
-            // recebe resposta
-            Object resposta = receptor.readObject();
+                    PedidoDeCadastro pedido = new PedidoDeCadastro(nome, login, senha, funcao);
+                    servidor.receba(pedido);
 
-            if (resposta instanceof Resultado r) {
-                System.out.println("[CLIENTE] Servidor respondeu:");
-                System.out.println("Sucesso: " + r.isSucesso());
-                System.out.println("Mensagem: " + r.getMensagem());
-            } else {
-                System.out.println("[CLIENTE] Resposta inesperada: " + resposta);
+                    Object resposta = servidor.envie();
+                    System.out.println("Resposta do servidor: " + resposta);
+                }
+                else if (comando.equalsIgnoreCase("login")) {
+                    System.out.print("Login: ");
+                    String login = teclado.nextLine();
+                    System.out.print("Senha: ");
+                    String senha = teclado.nextLine();
+
+                    PedidoDeLogin pedido = new PedidoDeLogin(login, senha);
+                    servidor.receba(pedido);
+
+                    Object resposta = servidor.envie();
+                    System.out.println("Resposta do servidor: " + resposta);
+                }
+                else {
+                    System.out.println("Comando desconhecido.");
+                }
             }
 
-            transmissor.close();
-            receptor.close();
-            scanner.close();
-
         } catch (Exception e) {
-            System.err.println("[CLIENTE] Erro: " + e.getMessage());
+            System.err.println("Erro no cliente: " + e.getMessage());
             e.printStackTrace();
         }
     }
