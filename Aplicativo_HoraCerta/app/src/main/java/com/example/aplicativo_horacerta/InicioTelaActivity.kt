@@ -25,7 +25,7 @@ class InicioTelaActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         setContent {
             Surface(color = Color.Black) {
-                InicioTelaActivity(
+                InicioTela(
                     onLoginClick = {
                         // Ação: Iniciar a FazerLoginActivity
                         val intent = Intent(this, FazerLoginActivity::class.java)
@@ -43,7 +43,7 @@ class InicioTelaActivity : ComponentActivity() {
 }
 
 @Composable
-fun InicioTelaActivity(
+fun InicioTela(
     onLoginClick: () -> Unit = {},
     onRegisterClick: () -> Unit = {}
 ) {
@@ -61,7 +61,7 @@ fun InicioTelaActivity(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 24.dp), // Apenas padding horizontal
+                .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
@@ -88,7 +88,7 @@ fun InicioTelaActivity(
             Spacer(modifier = Modifier.height(70.dp))
 
             Button(
-                onClick = onLoginClick, // <-- Chama o Intent de Login
+                onClick = onLoginClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(100.dp),
                 modifier = Modifier
@@ -102,10 +102,10 @@ fun InicioTelaActivity(
                 )
             }
 
-            Spacer(modifier = Modifier.height(16.dp)) // Espaço entre os botões
+            Spacer(modifier = Modifier.height(16.dp))
 
             Button(
-                onClick = onRegisterClick, // <-- Chama o Intent de Registro
+                onClick = onRegisterClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(100.dp),
                 modifier = Modifier
@@ -124,7 +124,7 @@ fun InicioTelaActivity(
 
 @Preview(showSystemUi = true, showBackground = true)
 @Composable
-fun PreviewInicioTelaActivity() {
+fun PreviewInicioTela() {
     Surface(color = Color.Black) {
         InicioTela()
     }
