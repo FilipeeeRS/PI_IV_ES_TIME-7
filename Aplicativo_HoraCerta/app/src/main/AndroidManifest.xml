@@ -13,6 +13,16 @@
         android:theme="@style/Theme.Aplicativo_HoraCerta"
         tools:targetApi="31">
         <activity
+            android:name=".AcessibilidadeActivity"
+            android:exported="false"
+            android:label="@string/title_activity_acessibilidade"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
+            android:name=".HomeCuidadorActivity"
+            android:exported="false"
+            android:label="@string/title_activity_home_cuidador"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
             android:name=".InicioTelaActivity"
             android:exported="false"
             android:label="@string/title_activity_inicio_tela"
