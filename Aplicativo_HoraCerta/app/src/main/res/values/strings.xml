@@ -1,4 +1,5 @@
 <resources>
     <string name="app_name">Aplicativo_HoraCerta</string>
     <string name="title_activity_inicio_tela">InicioTelaActivity</string>
+    <string name="title_activity_termos_iniciais">TermosIniciaisActivity</string>
 </resources>
