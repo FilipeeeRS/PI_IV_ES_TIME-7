@@ -1,5 +1,6 @@
 package com.example.aplicativo_horacerta
 
+import android.R.id.message
 import android.content.Intent // Importante para a navegação
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -26,9 +27,20 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.firebase.Firebase
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.auth
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.firestore
+
+import android.provider.Settings
+import androidx.compose.ui.platform.LocalContext
+
 
 class FazerRegistroActivity : ComponentActivity() {
+    private lateinit var auth: FirebaseAuth
     override fun onCreate(savedInstanceState: Bundle?) {
+        auth = Firebase.auth
         super.onCreate(savedInstanceState)
         setContent {
             Surface(color = Color.Black) {
@@ -48,16 +60,80 @@ class FazerRegistroActivity : ComponentActivity() {
     }
 }
 
+// Cria a conta
+fun createAccount(name:String, email: String, password:String, context: android.content.Context, onResult: (String) -> Unit){
+    val auth = Firebase.auth
+    val db = Firebase.firestore
+
+    val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+
+    auth.createUserWithEmailAndPassword(email, password)
+        .addOnCompleteListener { task ->
+            if (task.isSuccessful) {
+                val user = auth.currentUser
+                val userId = user?.uid
+
+                user?.sendEmailVerification()
+                    ?.addOnCompleteListener { verifyTask ->
+                        if (verifyTask.isSuccessful) {
+                            onResult("Conta criada! Verifique seu e-mail para ativá-la.")
+                        } else {
+                            onResult("Conta criada, mas falha ao enviar e-mail de verificação.")
+                        }
+                    }
+
+                val userMap = hashMapOf("nome" to name, "email" to email, "androidId" to androidId)
+                userId?.let { id ->
+                    db.collection("usuarios").document(id)
+                        .set(userMap)
+                        .addOnSuccessListener {
+                            println("Dados do usuário salvos com sucesso!")
+                            // Cria 3 categorias automaticamente
+                        }
+                        .addOnFailureListener { e ->
+                            println("Erro ao salvar dados: \${e.message}")
+                        }
+                }
+
+            } else {
+                val exception = task.exception
+                val errorMessage = when ((exception as? com.google.firebase.auth.FirebaseAuthException)?.errorCode) {
+                    "ERROR_EMAIL_ALREADY_IN_USE" -> "Este e-mail já está em uso."
+                    "ERROR_INVALID_EMAIL" -> "E-mail inválido."
+                    "ERROR_WEAK_PASSWORD" -> "A senha deve ter pelo menos 6 caracteres."
+                    else -> "Erro ao criar conta: \${exception?.localizedMessage}"
+                }
+                onResult(errorMessage)
+
+            }
+        }
+}
+
+
+
+
 @Composable
 fun FazerRegistro(
     onRegisterClick: () -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
     // Guardar o que o usuário digita
-    var nome by remember { mutableStateOf("") }
+    var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
+    var message by remember { mutableStateOf("") }
+
+    var nameError by remember { mutableStateOf<String?>(null) }
+    var emailError by remember { mutableStateOf<String?>(null) }
+    var passwordError by remember { mutableStateOf<String?>(null) }
+    var confirmPasswordError by remember { mutableStateOf<String?>(null) }
+
+    var showVerificationDialog by remember { mutableStateOf(false) }
+
+    var currentUser by remember { mutableStateOf<FirebaseAuth?>(null) }
+
+    val context = LocalContext.current
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
@@ -120,8 +196,8 @@ fun FazerRegistro(
 
             // Campo de Nome
             TextField(
-                value = nome,
-                onValueChange = { nome = it },
+                value = name,
+                onValueChange = { name = it },
                 label = { Text("Nome Completo:") },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), // Correto
@@ -224,7 +300,39 @@ fun FazerRegistro(
 
             // Botão de Registrar
             Button(
-                onClick = onRegisterClick,
+                onClick = {
+                    var isValid = true
+
+                    if (name.isBlank()) {
+                        nameError = "Nome obrigatório"
+                        isValid = false
+                    }
+                    if (email.isBlank()) {
+                        emailError = "Email obrigatório"
+                        isValid = false
+                    }
+                    if (password.isBlank()) {
+                        passwordError = "Senha obrigatória"
+                        isValid = false
+                    }
+                    if (confirmPassword.isBlank()) {
+                        confirmPasswordError = "Confirme a senha"
+                        isValid = false
+                    } else if (password != confirmPassword) {
+                        confirmPasswordError = "As senhas não coincidem"
+                        isValid = false
+                    }
+
+                    if (isValid) {
+                        createAccount(name, email.trim(), password, context) { result ->
+                            message = result
+                            currentUser = Firebase.auth
+                            if (result.contains("Verifique seu e-mail")) {
+                                showVerificationDialog = true
+                            }
+                        }
+                    }
+                },
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(100.dp),
                 modifier = Modifier
