@@ -21,6 +21,9 @@
             android:name=".HomeCuidadorActivity"
             android:exported="false"
             android:label="@string/title_activity_home_cuidador"
+            android:name=".TermosIniciaisActivity"
+            android:exported="false"
+            android:label="@string/title_activity_termos_iniciais"
             android:theme="@style/Theme.Aplicativo_HoraCerta" />
         <activity
             android:name=".InicioTelaActivity"
