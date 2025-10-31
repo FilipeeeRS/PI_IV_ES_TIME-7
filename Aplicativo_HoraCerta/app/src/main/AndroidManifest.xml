@@ -18,9 +18,6 @@
             android:label="@string/title_activity_acessibilidade"
             android:theme="@style/Theme.Aplicativo_HoraCerta" />
         <activity
-            android:name=".HomeCuidadorActivity"
-            android:exported="false"
-            android:label="@string/title_activity_home_cuidador"
             android:name=".TermosIniciaisActivity"
             android:exported="false"
             android:label="@string/title_activity_termos_iniciais"
@@ -30,9 +27,6 @@
             android:exported="false"
             android:label="@string/title_activity_inicio_tela"
             android:theme="@style/Theme.Aplicativo_HoraCerta" />
-        <activity
-            android:name=".SelecionarUsuarioActivity"
-            android:exported="false" />
         <activity
             android:name=".FazerRegistroActivity"
             android:exported="false" />
