@@ -95,7 +95,7 @@ fun TermosTela(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Spacer(modifier = Modifier.height(125.dp))
+            Spacer(modifier = Modifier.height(100.dp))
 
             // Logo
             Image(

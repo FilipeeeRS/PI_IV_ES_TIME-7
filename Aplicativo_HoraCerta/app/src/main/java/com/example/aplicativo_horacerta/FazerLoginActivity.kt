@@ -32,7 +32,7 @@ class FazerLoginActivity : ComponentActivity() {
         setContent {
             Surface(color = Color.Black) {
                 FazerLogin(
-                    onConfirmClick = { /* ação do botão */ },
+                    //onConfirmClick = { /* ação do botão */ },
                     onBackClick = { finish() }
                 )
             }
@@ -82,7 +82,7 @@ fun FazerLogin(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Spacer(modifier = Modifier.height(125.dp))
+            Spacer(modifier = Modifier.height(100.dp))
 
             // Logo
             Image(

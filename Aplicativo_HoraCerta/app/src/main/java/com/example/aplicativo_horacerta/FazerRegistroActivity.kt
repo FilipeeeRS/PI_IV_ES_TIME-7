@@ -1,7 +1,6 @@
 package com.example.aplicativo_horacerta
 
-import android.R.id.message
-import android.content.Intent // Importante para a navegação
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,10 +31,9 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.firestore
-
 import android.provider.Settings
 import androidx.compose.ui.platform.LocalContext
-
+import androidx.compose.ui.platform.LocalInspectionMode
 
 class FazerRegistroActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
@@ -47,7 +45,7 @@ class FazerRegistroActivity : ComponentActivity() {
                 FazerRegistro(
                     onRegisterClick = {
                         // Ação do botão: Ir para a próxima tela
-                        // val intent = Intent(this, SelecionarUsuario::class.java)
+                        // val intent = Intent(this, Home...::class.java)
                         // startActivity(intent)
                     },
                     onBackClick = {
@@ -61,7 +59,15 @@ class FazerRegistroActivity : ComponentActivity() {
 }
 
 // Cria a conta
-fun createAccount(name:String, email: String, password:String, context: android.content.Context, onResult: (String) -> Unit){
+fun createAccount(
+    name:String,
+    email: String,
+    password:String,
+    profileType: String,
+    context: android.content.Context,
+    onResult: (String) -> Unit
+){
+
     val auth = Firebase.auth
     val db = Firebase.firestore
 
@@ -82,7 +88,13 @@ fun createAccount(name:String, email: String, password:String, context: android.
                         }
                     }
 
-                val userMap = hashMapOf("nome" to name, "email" to email, "androidId" to androidId)
+                val userMap = hashMapOf(
+                    "nome" to name,
+                    "email" to email,
+                    "androidId" to androidId,
+                    "tipoPerfil" to profileType
+                )
+
                 userId?.let { id ->
                     db.collection("usuarios").document(id)
                         .set(userMap)
@@ -91,7 +103,7 @@ fun createAccount(name:String, email: String, password:String, context: android.
                             // Cria 3 categorias automaticamente
                         }
                         .addOnFailureListener { e ->
-                            println("Erro ao salvar dados: \${e.message}")
+                            println("Erro ao salvar dados: ${e.message}")
                         }
                 }
 
@@ -101,7 +113,7 @@ fun createAccount(name:String, email: String, password:String, context: android.
                     "ERROR_EMAIL_ALREADY_IN_USE" -> "Este e-mail já está em uso."
                     "ERROR_INVALID_EMAIL" -> "E-mail inválido."
                     "ERROR_WEAK_PASSWORD" -> "A senha deve ter pelo menos 6 caracteres."
-                    else -> "Erro ao criar conta: \${exception?.localizedMessage}"
+                    else -> "Erro ao criar conta: ${exception?.localizedMessage}"
                 }
                 onResult(errorMessage)
 
@@ -110,19 +122,27 @@ fun createAccount(name:String, email: String, password:String, context: android.
 }
 
 
-
-
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FazerRegistro(
     onRegisterClick: () -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
+
+    // Preview
+    val isInPreview = LocalInspectionMode.current
+
     // Guardar o que o usuário digita
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
+
+    // Estado do perfil
+    val profileOptions = listOf("Cuidador", "Idoso")
+    var selectedProfileIndex by remember { mutableStateOf<Int?>(null) }
+    var profileTypeError by remember { mutableStateOf<String?>(null) }
 
     var nameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
@@ -172,7 +192,7 @@ fun FazerRegistro(
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
-            Spacer(modifier = Modifier.height(125.dp))
+            Spacer(modifier = Modifier.height(50.dp))
 
             // Logo
             Image(
@@ -192,7 +212,45 @@ fun FazerRegistro(
                 textAlign = TextAlign.Center
             )
 
-            Spacer(modifier = Modifier.height(50.dp))
+            Spacer(modifier = Modifier.height(25.dp))
+
+            // Selecionar perfil
+            Text(
+                text = "   Tipo de Perfil:",
+                color = Color.White,
+                fontSize = 16.sp,
+                modifier = Modifier.align(Alignment.Start)
+            )
+            SingleChoiceSegmentedButtonRow(
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                profileOptions.forEachIndexed { index, label ->
+                    SegmentedButton(
+                        modifier = Modifier.padding(horizontal = 6.dp),
+                        shape = RoundedCornerShape(50.dp),
+                        onClick = { selectedProfileIndex = index },
+                        selected = index == selectedProfileIndex,
+                        colors = SegmentedButtonDefaults.colors(
+                            activeContainerColor = Color.White,
+                            activeContentColor = Color.Black,
+                            inactiveContainerColor = Color.Gray,
+                            inactiveContentColor = Color.Black
+                        )
+                    ) {
+                        Text(label, fontSize = 16.sp,)
+                    }
+                }
+            }
+            if (profileTypeError != null) {
+                Text(
+                    text = profileTypeError!!,
+                    color = Color.Red,
+                    fontSize = 18.sp,
+                    modifier = Modifier.align(Alignment.Start)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
 
             // Campo de Nome
             TextField(
@@ -200,7 +258,7 @@ fun FazerRegistro(
                 onValueChange = { name = it },
                 label = { Text("Nome Completo:") },
                 singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text), // Correto
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text),
                 shape = RoundedCornerShape(24.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = Color.White,
@@ -322,9 +380,16 @@ fun FazerRegistro(
                         confirmPasswordError = "As senhas não coincidem"
                         isValid = false
                     }
+                    if (selectedProfileIndex == null) {
+                        profileTypeError = "Selecione um tipo de perfil"
+                        isValid = false
+                    } else {
+                        profileTypeError = null
+                    }
 
                     if (isValid) {
-                        createAccount(name, email.trim(), password, context) { result ->
+                        val profileType = selectedProfileIndex?.let { profileOptions[it] } ?: ""
+                        createAccount(name, email.trim(), password, profileType, context) { result ->
                             message = result
                             currentUser = Firebase.auth
                             if (result.contains("Verifique seu e-mail")) {

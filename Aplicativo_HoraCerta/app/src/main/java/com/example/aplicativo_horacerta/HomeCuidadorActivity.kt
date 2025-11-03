@@ -160,7 +160,8 @@ fun HomeCuidador(
                     )
                     Tab(
                         selected = selectedTabIndex == 1,
-                        onClick = { scope.launch { pagerState.animateScrollToPage(1) } },                        text = { Text("HISTÓRICO", fontSize = 18.sp) },
+                        onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                        text = { Text("HISTÓRICO", fontSize = 18.sp) },
                         selectedContentColor = Color.Black,
                         unselectedContentColor = Color.Gray
                     )
