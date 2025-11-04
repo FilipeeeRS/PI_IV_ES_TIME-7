@@ -32,7 +32,7 @@ class FazerLoginActivity : ComponentActivity() {
         setContent {
             Surface(color = Color.Black) {
                 FazerLogin(
-                    //onConfirmClick = { /* ação do botão */ },
+                    onConfirmClick = { /* ação do botão */ },
                     onBackClick = { finish() }
                 )
             }

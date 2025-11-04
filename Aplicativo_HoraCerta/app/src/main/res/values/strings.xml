@@ -4,4 +4,6 @@
     <string name="title_activity_home_cuidador">HomeCuidadorActivity</string>
     <string name="title_activity_acessibilidade">AcessibilidadeActivity</string>
     <string name="title_activity_termos_iniciais">TermosIniciaisActivity</string>
+    <string name="title_activity_remédio_criar">RemédioCriarActivity</string>
+    <string name="title_activity_remédio_editar">RemédioEditarActivity</string>
 </resources>

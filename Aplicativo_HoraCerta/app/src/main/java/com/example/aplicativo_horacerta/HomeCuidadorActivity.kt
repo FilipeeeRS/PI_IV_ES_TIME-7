@@ -1,5 +1,6 @@
 package com.example.aplicativo_horacerta
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import kotlinx.coroutines.launch
+import androidx.compose.ui.platform.LocalContext
 
 
 class HomeCuidadorActivity : ComponentActivity() {
@@ -201,12 +203,17 @@ fun HomeCuidador(
 ////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun MedicamentosTab() {
+    val context = LocalContext.current
+
     Column(
         modifier = Modifier.fillMaxWidth(),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         TextButton(
-            onClick = { /* TODO: Navegar para Adicionar Medicamento */ },
+            onClick = {
+                val intent = Intent(context, RemédioEditarActivity::class.java)
+                context.startActivity(intent)
+            },
             modifier = Modifier.padding(vertical = 8.dp)
         ) {
             Text(
@@ -226,7 +233,11 @@ fun MedicamentosTab() {
                 MedicamentoItem(
                     medicamento = medicamento,
                     onDeleteClick = { /* TODO: Deletar */ },
-                    onEditClick = { /* TODO: Editar */ }
+                    onEditClick = {
+                        val intent = Intent(context, RemédioEditarActivity::class.java)
+                        intent.putExtra("MEDICAMENTO_ID", medicamento.id.toString())
+                        context.startActivity(intent)
+                    }
                 )
             }
         }
