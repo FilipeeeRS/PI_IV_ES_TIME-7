@@ -1,40 +1,65 @@
 package org.example;
 
-public class PedidoDeCadastro extends Comunicado
-{
-    private static final long serialVersionUID = 1L;
+import com.google.gson.annotations.SerializedName;
+import io.github.cdimascio.dotenv.Dotenv;
+import com.mongodb.client.*;
+import org.bson.Document;
+
+import java.util.UUID;
+import java.util.concurrent.ThreadLocalRandom;
+
+public class PedidoDeCadastro extends ComunicadoJson {
+    // Campos recebidos do cliente
     private String nome;
-    private String login;
-    private String senha;
 
-    public PedidoDeCadastro(String nome, String login, String senha)
-    {
-        if (nome == null || nome.isBlank())
-            throw new IllegalArgumentException("nome inválido");
+    @SerializedName("login")  // "login" do JSON vira "email" aqui
+    private String email;
 
-        if (login == null || login.isBlank())
-            throw new IllegalArgumentException("login inválido");
 
-        if (senha == null || senha.isBlank())
-            throw new IllegalArgumentException("senha inválida");
+    // Gerados automaticamente no servidor
+    private String uid;
+    private String codigo;
 
-        this.nome  = nome;
-        this.login = login;
-        this.senha = senha;
+    public PedidoDeCadastro() { super("Cadastro"); }
+
+    private void gerarIds() {
+        if (uid == null || uid.isBlank())
+            uid = UUID.randomUUID().toString();
+
+        if (codigo == null || codigo.isBlank())
+            codigo = String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
     }
 
-    public String getNome()  { return nome;  }
-    public String getLogin() { return login; }
-    public String getSenha() { return senha; } // se preferir, não exponha a senha
+    public boolean criarDocumento() {
+        try {
+            if (isBlank(nome) || isBlank(email) )
+                throw new IllegalArgumentException("Campos obrigatórios ausentes");
 
-    @Override
-    public String toString()
-    {
-        // evita expor a senha em logs
-        return "PedidoDeCadastro{" +
-                "nome='" + this.nome + '\'' +
-                ", login='" + this.login + '\'' +
-                ", senha='***'" +
-                '}';
+            gerarIds();
+
+            Dotenv dotenv = Dotenv.load();
+            String uri = dotenv.get("MONGO_URI");
+            String dbName = dotenv.get("MONGO_DATABASE", "sample_horacerta");
+
+            try (MongoClient client = MongoClients.create(uri)) {
+                MongoDatabase db = client.getDatabase(dbName);
+                MongoCollection<Document> col = db.getCollection("usuario");
+
+                Document doc = new Document("uid", uid)
+                        .append("nome", nome)
+                        .append("email", email)
+                        .append("codigo", codigo);
+
+                col.insertOne(doc);
+                return true;
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 }

@@ -13,24 +13,20 @@ public class PedidoDeLogin extends ComunicadoJson {
     // O cliente envia "login" (email) e "senha"
     @SerializedName("login")
     private String email;
-    private String senha;
 
     public PedidoDeLogin() {
         super("Login");
     }
 
-    public PedidoDeLogin(String email, String senha) {
+    public PedidoDeLogin(String email ) {
         super("Login");
         this.email = email;
-        this.senha = senha;
     }
 
     public Usuario getUserData() {
         // Normaliza entrada
         this.email = (this.email == null) ? null : this.email.trim().toLowerCase();
-        this.senha = (this.senha == null) ? null : this.senha.trim();
-
-        if (isBlank(this.email) || isBlank(this.senha)) {
+        if (isBlank(this.email) ) {
             System.out.println("[LOGIN] Email ou senha em branco!");
             return null;
         }
@@ -55,21 +51,13 @@ public class PedidoDeLogin extends ComunicadoJson {
 
             if (doc == null) return null; // e-mail não encontrado
 
-            String senhaBanco = doc.getString("senha");
-            System.out.println("[LOGIN] senhaBanco=" + senhaBanco);
-
-            if (senhaBanco == null || !senhaBanco.equals(this.senha)) {
-                System.out.println("[LOGIN] Senha incorreta!");
-                return null;
-            }
 
             System.out.println("[LOGIN] Usuário autenticado com sucesso!");
             return new Usuario(
                     doc.getObjectId("_id").toHexString(),
                     doc.getString("uid"),
                     doc.getString("nome"),
-                    doc.getString("email"),
-                    doc.getString("tipo")
+                    doc.getString("email")
             );
         } catch (Exception e) {
             e.printStackTrace();

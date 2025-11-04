@@ -36,6 +36,13 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.FirebaseAuthException
 import com.google.firebase.auth.auth
 import com.google.firebase.firestore.firestore
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.Socket
 
 class FazerRegistroActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
@@ -137,6 +144,10 @@ fun FazerRegistro(
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
+    var resultado by remember { mutableStateOf("") }
+
+    val scope = rememberCoroutineScope()
+
     fun isValidEmail(s: String) =
         android.util.Patterns.EMAIL_ADDRESS.matcher(s).matches()
 
@@ -209,7 +220,9 @@ fun FazerRegistro(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     isError = nameError != null
@@ -239,7 +252,9 @@ fun FazerRegistro(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     isError = emailError != null
@@ -269,7 +284,9 @@ fun FazerRegistro(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     isError = passwordError != null,
@@ -309,7 +326,9 @@ fun FazerRegistro(
                         focusedIndicatorColor = Color.Transparent,
                         unfocusedIndicatorColor = Color.Transparent
                     ),
-                    modifier = Modifier.fillMaxWidth().height(60.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(60.dp),
                     shape = RoundedCornerShape(12.dp),
                     singleLine = true,
                     isError = confirmPasswordError != null,
@@ -347,6 +366,32 @@ fun FazerRegistro(
                     if (!ok) return@Button
 
                     loading = true
+                    scope.launch(Dispatchers.IO) {
+
+                        try {
+
+                            val conexao = Socket("10.0.2.2", 3000)
+                            val transmissor =
+                                BufferedWriter(OutputStreamWriter(conexao.getOutputStream()))
+                            val receptor =
+                                BufferedReader(InputStreamReader(conexao.getInputStream()))
+                            val servidor = Parceiro(conexao, receptor, transmissor)
+
+                            val pedido = PedidoDeCadastro(name, email)
+                            servidor.receba(pedido)
+
+                            val resposta = servidor.envie()
+                           // servidor.adeus()
+
+
+                        }catch (e: Exception)
+                        { }
+
+
+
+                    }
+
+
                     createAccount(name.trim(), email.trim(), password, context) { success, msg ->
                         loading = false
                         uiMessage = msg
@@ -360,7 +405,9 @@ fun FazerRegistro(
                 enabled = !loading,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                 shape = RoundedCornerShape(100.dp),
-                modifier = Modifier.width(220.dp).height(70.dp)
+                modifier = Modifier
+                    .width(220.dp)
+                    .height(70.dp)
             ) {
                 if (loading) {
                     CircularProgressIndicator(
@@ -398,6 +445,8 @@ fun FazerRegistro(
         }
     }
 }
+
+
 
 @Preview(showSystemUi = true, showBackground = true)
 @Composable
