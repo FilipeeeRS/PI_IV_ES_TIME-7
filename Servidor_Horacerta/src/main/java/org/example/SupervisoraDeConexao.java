@@ -1,9 +1,17 @@
 package org.example;
 
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.*;
+import com.mongodb.client.model.Filters;
+
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+
+import org.bson.Document;
+import io.github.cdimascio.dotenv.Dotenv;
 
 public class SupervisoraDeConexao extends Thread {
     private final Socket conexao;
@@ -68,6 +76,53 @@ public class SupervisoraDeConexao extends Thread {
                     this.usuario.receba(new Resultado(sucesso, mensagem)); // faz flush
                     System.out.println("[SERVIDOR] Resultado enviado.");
                 }
+
+                else if (comunicado instanceof PedidoDeCriarMedicamento pedido) {
+                    System.out.println("[SERVIDOR] Recebido pedido de criar medicamento.");
+                    boolean sucesso = pedido.executar();
+
+                    String mensagem;
+                    if (sucesso) {
+                        mensagem = "Medicamento criado com sucesso!";
+                    } else {
+                        mensagem = "Erro ao criar medicamento no banco de dados.";
+                    }
+
+                    this.usuario.receba(new Resultado(sucesso, mensagem)); // envia true ou false para o android
+                }
+
+                else if (comunicado instanceof PedidoDeListarMedicamentos pedido) {
+                    System.out.println("[SERVIDOR] Listando medicamentos para: " + pedido.getIdUsuario());
+
+                    String idUsuario = pedido.getIdUsuario();
+                    ArrayList<Medicamento> lista = new ArrayList<>();
+
+                    Dotenv dotenv = Dotenv.load(); // Conecta no mongo e busca a lista
+                    try (MongoClient client = MongoClients.create(dotenv.get("MONGO_URI"))) {
+                        MongoDatabase db = client.getDatabase(dotenv.get("MONGO_DATABASE", "sample_horacerta"));
+                        MongoCollection<Document> col = db.getCollection("medicamentos");
+
+                        // Busca as informações onde o 'idUsuario' é igual
+                        for (Document doc : col.find(Filters.eq("idUsuario", idUsuario))) {
+                            Medicamento med = new Medicamento(
+                                    doc.getObjectId("_id").toHexString(),
+                                    doc.getString("nome"),
+                                    doc.getString("dia"),
+                                    doc.getString("horario"),
+                                    doc.getString("descricao"),
+                                    doc.getString("idUsuario")
+                            );
+                            lista.add(med);
+                        }
+                    } catch (Exception e) {
+                        System.err.println("[ERRO] Falha ao listar medicamentos: " + e.getMessage());
+                    }
+
+                    System.out.println("[SERVIDOR] Encontrados " + lista.size() + " medicamentos.");
+
+                    this.usuario.receba(new ResultadoListaMedicamentos(lista)); // Envia de volta para o android
+                }
+
             }
         } catch (Exception e) {
             System.out.println("[SERVIDOR] Conexao encerrada: " + e);
