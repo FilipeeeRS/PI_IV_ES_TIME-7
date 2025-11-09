@@ -26,24 +26,30 @@ class TermosIniciaisActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        // Verifica se os Termos já foram aceitos
+        val prefs = getSharedPreferences("prefs", MODE_PRIVATE)
+        val onboardingDone = prefs.getBoolean("onboarding_done", false)
+
+        if (onboardingDone) {
+            // Foi Aceito: continua
+            val intent = Intent(this, InicioTelaActivity::class.java)
+            startActivity(intent)
+            finish()
+            return
+        }
+
+        // Não foi aceito: mostra os termos
         setContent {
             Surface(color = Color.Black) {
                 TermosTela(
-
-// ...
                     onAcceptClick = {
-                        // 1. Salva a preferência
-                        val prefs = getSharedPreferences("prefs", MODE_PRIVATE)
+                        // Salva a preferência
                         prefs.edit().putBoolean("onboarding_done", true).apply()
 
-                        // 2. Navega para a tela inicial (InicioTelaActivity)
                         val intent = Intent(this, InicioTelaActivity::class.java)
                         startActivity(intent)
-
-
                         finish()
                     },
-// ...,
                     onBackClick = {
                         finish()
                     }
@@ -129,7 +135,7 @@ fun TermosTela(
                     fontSize = 15.sp,
                     modifier = Modifier
                         .padding(16.dp)
-                        .verticalScroll(scroll)
+                        .verticalScroll(rememberScrollState())
                 )
             }
 

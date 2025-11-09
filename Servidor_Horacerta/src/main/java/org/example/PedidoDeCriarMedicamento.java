@@ -12,7 +12,7 @@ public class PedidoDeCriarMedicamento extends Comunicado {
     private String dia;
     private String horario;
     private String descricao;
-    private String idUsuario; // de quem é o remédio (?)
+    private String idUsuario;
 
     public PedidoDeCriarMedicamento(String nome, String dia, String horario, String descricao, String idUsuario) {
         this.nome = nome;

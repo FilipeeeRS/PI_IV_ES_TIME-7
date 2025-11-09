@@ -57,23 +57,47 @@ public class SupervisoraDeConexao extends Thread {
                 System.out.println("[SERVIDOR] Recebido: " + comunicado.getClass().getSimpleName());
 
                 if (comunicado instanceof PedidoDeCadastro pedido) {
-                    String login = pedido.getLogin();
+                    String nome = pedido.getNome();
+                    String email = pedido.getEmail();
                     String senha = pedido.getSenha();
+                    String tipo = pedido.getTipo();
 
                     boolean sucesso;
                     String mensagem;
 
-                    if (login == null || login.isBlank() || senha == null || senha.isBlank()) {
-                        sucesso=false; mensagem="Login/senha inválidos.";
-                    } else if (Servidor.CADASTROS.containsKey(login)) {
-                        sucesso=false; mensagem="Login já existe.";
-                    } else {
-                        Servidor.CADASTROS.put(login, senha);
-                        sucesso=true;  mensagem="Cadastro realizado com sucesso.";
+                    // Conecta ao MongoDB
+                    Dotenv dotenv = Dotenv.load();
+                    try (MongoClient client = MongoClients.create(dotenv.get("MONGO_URI"))) {
+                        MongoDatabase db = client.getDatabase(dotenv.get("MONGO_DATABASE", "sample_horacerta"));
+                        MongoCollection<Document> col = db.getCollection("usuarios");
+
+                        // Verifica se o email já existe
+                        Document existente = col.find(Filters.eq("email", email)).first();
+
+                        if (existente != null) {
+                            sucesso = false;
+                            mensagem = "Este e-mail já está em uso.";
+                        } else {
+                            Document novoUsuario = new Document()
+                                    .append("nome", nome)
+                                    .append("email", email)
+                                    .append("senha", senha)
+                                    .append("tipo", tipo);
+
+                            // Insere usuário no MongoDB
+                            col.insertOne(novoUsuario);
+
+                            sucesso = true;
+                            mensagem = "Cadastro realizado com sucesso!";
+                        }
+                    } catch (Exception e) {
+                        System.err.println("[ERRO] Falha ao cadastrar: " + e.getMessage());
+                        sucesso = false;
+                        mensagem = "Erro ao conectar com o banco de dados.";
                     }
 
-                    System.out.println("[SERVIDOR] Enviando resultado para " + login + ": " + mensagem);
-                    this.usuario.receba(new Resultado(sucesso, mensagem)); // faz flush
+                    System.out.println("[SERVIDOR] Enviando resultado para " + email + ": " + mensagem);
+                    this.usuario.receba(new Resultado(sucesso, mensagem));
                     System.out.println("[SERVIDOR] Resultado enviado.");
                 }
 
@@ -102,7 +126,7 @@ public class SupervisoraDeConexao extends Thread {
                         MongoDatabase db = client.getDatabase(dotenv.get("MONGO_DATABASE", "sample_horacerta"));
                         MongoCollection<Document> col = db.getCollection("medicamentos");
 
-                        // Busca as informações onde o 'idUsuario' é igual
+                        // Busca as informações onde o idUsuario é igual
                         for (Document doc : col.find(Filters.eq("idUsuario", idUsuario))) {
                             Medicamento med = new Medicamento(
                                     doc.getObjectId("_id").toHexString(),
@@ -123,7 +147,38 @@ public class SupervisoraDeConexao extends Thread {
                     this.usuario.receba(new ResultadoListaMedicamentos(lista)); // Envia de volta para o android
                 }
 
+                else if (comunicado instanceof PedidoDeDeletarMedicamento pedido) {
+                    System.out.println("[SERVIDOR] Recebido pedido para deletar: " + pedido.getIdMedicamento());
+
+                    String idParaDeletar = pedido.getIdMedicamento();
+                    boolean sucesso;
+                    String mensagem;
+
+                    Dotenv dotenv = Dotenv.load();
+                    try (MongoClient client = MongoClients.create(dotenv.get("MONGO_URI"))) {
+                        MongoDatabase db = client.getDatabase(dotenv.get("MONGO_DATABASE", "sample_horacerta"));
+                        MongoCollection<Document> col = db.getCollection("medicamentos");
+
+                        ObjectId objectId = new ObjectId(idParaDeletar);
+
+                        var deleteResult = col.deleteOne(Filters.eq("_id", objectId));
+
+                        if (deleteResult.getDeletedCount() > 0) {
+                            sucesso = true;
+                            mensagem = "Medicamento deletado com sucesso.";
+                        } else {
+                            sucesso = false;
+                            mensagem = "Medicamento não encontrado.";
+                        }
+                    } catch (Exception e) {
+                        System.err.println("[ERRO] Falha ao deletar: " + e.getMessage());
+                        sucesso = false;
+                        mensagem = "Erro ao conectar com o banco de dados.";
+                    }
+
+                    this.usuario.receba(new Resultado(sucesso, mensagem));
             }
+
         } catch (Exception e) {
             System.out.println("[SERVIDOR] Conexao encerrada: " + e);
             e.printStackTrace();
@@ -134,4 +189,3 @@ public class SupervisoraDeConexao extends Thread {
             synchronized (usuarios) { usuarios.remove(usuario); }
         }
     }
-}

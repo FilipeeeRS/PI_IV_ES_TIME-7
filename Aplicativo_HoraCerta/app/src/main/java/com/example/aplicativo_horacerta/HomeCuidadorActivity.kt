@@ -2,8 +2,10 @@ package com.example.aplicativo_horacerta
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -33,6 +35,13 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
+import com.example.aplicativo_horacerta.network.PedidoDeDeletarMedicamento
+import com.example.aplicativo_horacerta.network.Resultado
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.net.Socket
 
 
 class HomeCuidadorActivity : ComponentActivity() {
@@ -42,9 +51,8 @@ class HomeCuidadorActivity : ComponentActivity() {
             Surface(color = Color.Black) {
                 HomeCuidador(
                     onAccessibilityClick = {
-                        // Criar e registrar a AcessiblidadeActivityval
-                        // intent = Intent(this, AcessiblidadeActivity::class.java)
-                        // startActivity(intent)
+                        val intent = Intent(this, AcessibilidadeActivity::class.java)
+                        startActivity(intent)
                     }
                 )
             }
@@ -59,7 +67,8 @@ data class Medicamento(
     val data: String,
     val horario: String
 )
-//listOf funciona como exemplo
+
+//listOf = exemplo para o preview
 val sampleMedicamentos = listOf(
     Medicamento(1, "Buscopan", true, "02/04 Quarta-Feira", "18:30"),
     Medicamento(2, "Buscopan",true, "02/04 Quarta-Feira", "18:30"),
@@ -75,7 +84,8 @@ data class HistoricoMedicamento(
     val data: String,
     val horario: String
 )
-//listOf funciona como exemplo
+
+//listOf = exemplo para o preview
 val sampleHistorico = listOf(
     HistoricoMedicamento(1, "Buscopan", true, "25/01 Sexta-Feir", "18:30"),
     HistoricoMedicamento(2, "Buscopan", false, "25/01 Sexta-Feira", "18:30"),
@@ -84,6 +94,7 @@ val sampleHistorico = listOf(
     HistoricoMedicamento(5, "Salonpas", true, "25/01 Sexta-Feira", "18:30")
 )
 
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeCuidador(
     initialTabIndex: Int = 0,
@@ -99,6 +110,9 @@ fun HomeCuidador(
     LaunchedEffect(pagerState.currentPage) {
         selectedTabIndex = pagerState.currentPage
     }
+
+    val context = LocalContext.current
+    val medicamentosList = remember { mutableStateListOf(*sampleMedicamentos.toTypedArray()) }
 
     Scaffold(
         topBar = {
@@ -194,16 +208,72 @@ fun HomeCuidador(
                 .background(contentColor)
         ) { page ->
             when (page) {
-                0 -> MedicamentosTab()
+                0 -> MedicamentosTab(
+                    medicamentosList = medicamentosList,
+                    onRemoveMedicamento = { medicamento ->
+                        scope.launch {
+                            //  Deletar do servidor
+                            val resultado = performDeleteMedicamento(medicamento.id.toString())
+
+                            if (resultado?.sucesso == true) {
+                                // Se deletou, remove da lista
+                                medicamentosList.remove(medicamento)
+                                Toast.makeText(context, "Medicamento deletado!", Toast.LENGTH_SHORT).show()
+                            } else {
+                                Toast.makeText(context, "Erro: ${resultado?.mensagem}", Toast.LENGTH_LONG).show()
+                            }
+                        }
+                    }
+                )
                 1 -> HistoricoTab()
             }
         }
     }
 }
+
+// Função de rede para deletar medicamento
+suspend fun performDeleteMedicamento(idMedicamento: String): Resultado? {
+
+    val SERVER_IP = "192.168.0.10"
+    val SERVER_PORT = 12345
+
+    val pedido = PedidoDeDeletarMedicamento(idMedicamento)
+
+    // Roda a rede em background
+    return withContext(Dispatchers.IO) {
+        try {
+            val socket = Socket(SERVER_IP, SERVER_PORT)
+            val oos = ObjectOutputStream(socket.outputStream)
+
+            oos.writeObject(pedido) // Envia o pedido
+            oos.flush()
+
+            val ois = ObjectInputStream(socket.inputStream)
+            val resposta = ois.readObject() as? Resultado
+
+            ois.close()
+            oos.close()
+            socket.close()
+            //recebe a resposta
+            resposta
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            null
+        }
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 @Composable
-fun MedicamentosTab() {
+fun MedicamentosTab(
+    medicamentosList: List<Medicamento>,
+    onRemoveMedicamento: (Medicamento) -> Unit
+) {
     val context = LocalContext.current
+
+    var showDeleteDialog by remember { mutableStateOf(false) }
+    var medicamentoParaDeletar by remember { mutableStateOf<Medicamento?>(null) }
 
     Column(
         modifier = Modifier.fillMaxWidth(),
@@ -211,7 +281,7 @@ fun MedicamentosTab() {
     ) {
         TextButton(
             onClick = {
-                val intent = Intent(context, RemédioEditarActivity::class.java)
+                val intent = Intent(context, RemédioCriarActivity::class.java)
                 context.startActivity(intent)
             },
             modifier = Modifier.padding(vertical = 8.dp)
@@ -229,10 +299,12 @@ fun MedicamentosTab() {
                 .padding(horizontal = 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
-            items(sampleMedicamentos) { medicamento ->
+            items(medicamentosList) { medicamento ->
                 MedicamentoItem(
                     medicamento = medicamento,
-                    onDeleteClick = { /* TODO: Deletar */ },
+                    onDeleteClick = {
+                        medicamentoParaDeletar = medicamento
+                        showDeleteDialog = true },
                     onEditClick = {
                         val intent = Intent(context, RemédioEditarActivity::class.java)
                         intent.putExtra("MEDICAMENTO_ID", medicamento.id.toString())
@@ -242,7 +314,58 @@ fun MedicamentosTab() {
             }
         }
     }
+
+    if (showDeleteDialog && medicamentoParaDeletar != null) {
+        DeleteConfirmationDialog(
+            medicamentoNome = medicamentoParaDeletar!!.nome,
+            onConfirmDelete = {
+                onRemoveMedicamento(medicamentoParaDeletar!!)
+                showDeleteDialog = false
+                medicamentoParaDeletar = null
+            },
+            onDismiss = {
+                showDeleteDialog = false
+                medicamentoParaDeletar = null
+            }
+        )
+    }
 }
+
+////////////////////////////////////////////////////////////////////////////////
+@Composable
+fun DeleteConfirmationDialog(
+    medicamentoNome: String,
+    onConfirmDelete: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(text = "Confirmar Exclusão")
+        },
+        text = {
+            Text(text = "Você tem certeza que deseja deletar o medicamento \"$medicamentoNome\"?")
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirmDelete,
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.Red
+                )
+            ) {
+                Text("Deletar")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = onDismiss
+            ) {
+                Text("Cancelar")
+            }
+        }
+    )
+}
+
 @Composable
 fun MedicamentoItem(
     medicamento: Medicamento,
@@ -273,10 +396,12 @@ fun MedicamentoItem(
         }
     }
 }
+
 ////////////////////////////////////////////////////////////////////////////////
+
 @Composable
 fun HistoricoTab() {
-    // Se a lista estiver vazia, LazyColumn não mostra nada
+    // se a lista estiver vazia, não mostra nada
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()

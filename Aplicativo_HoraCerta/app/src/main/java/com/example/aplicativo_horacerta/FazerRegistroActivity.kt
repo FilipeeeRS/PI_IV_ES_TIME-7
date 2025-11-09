@@ -26,30 +26,29 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.google.firebase.Firebase
-import com.google.firebase.auth.FirebaseAuth
-import com.google.firebase.auth.auth
-import com.google.firebase.firestore.FirebaseFirestore
-import com.google.firebase.firestore.firestore
-import android.provider.Settings
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
+import com.example.aplicativo_horacerta.network.PedidoDeCadastro
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.ObjectInputStream
+import java.io.ObjectOutputStream
+import java.net.Socket
 
 class FazerRegistroActivity : ComponentActivity() {
-    private lateinit var auth: FirebaseAuth
     override fun onCreate(savedInstanceState: Bundle?) {
-        auth = Firebase.auth
         super.onCreate(savedInstanceState)
         setContent {
             Surface(color = Color.Black) {
                 FazerRegistro(
                     onRegisterClick = {
-                        // Ação do botão: Ir para a próxima tela
-                        // val intent = Intent(this, Home...::class.java)
-                        // startActivity(intent)
+                        // Ação: trocar de tela (login)
+                        val intent = Intent(this, FazerLoginActivity::class.java)
+                        startActivity(intent)
+                        finish()
                     },
                     onBackClick = {
-                        // Ação do botão: Voltar (fecha esta activity)
                         finish()
                     }
                 )
@@ -59,66 +58,42 @@ class FazerRegistroActivity : ComponentActivity() {
 }
 
 // Cria a conta
-fun createAccount(
-    name:String,
-    email: String,
-    password:String,
-    profileType: String,
-    context: android.content.Context,
-    onResult: (String) -> Unit
-){
+suspend fun createAccount(nome: String, email: String, senha: String, profileType: String, onResult: (String) -> Unit) {
 
-    val auth = Firebase.auth
-    val db = Firebase.firestore
+    val SERVER_IP = "192.168.0.10"
+    val SERVER_PORT = 12345
 
-    val androidId = Settings.Secure.getString(context.contentResolver, Settings.Secure.ANDROID_ID)
+    val pedido = PedidoDeCadastro(nome, email, senha, profileType)
 
-    auth.createUserWithEmailAndPassword(email, password)
-        .addOnCompleteListener { task ->
-            if (task.isSuccessful) {
-                val user = auth.currentUser
-                val userId = user?.uid
+    // Roda a rede em background
+    withContext(Dispatchers.IO) {
+        try {
+            val socket = Socket(SERVER_IP, SERVER_PORT)
 
-                user?.sendEmailVerification()
-                    ?.addOnCompleteListener { verifyTask ->
-                        if (verifyTask.isSuccessful) {
-                            onResult("Conta criada! Verifique seu e-mail para ativá-la.")
-                        } else {
-                            onResult("Conta criada, mas falha ao enviar e-mail de verificação.")
-                        }
-                    }
+            val oos = ObjectOutputStream(socket.outputStream)
+            oos.writeObject(pedido)
+            oos.flush()
 
-                val userMap = hashMapOf(
-                    "nome" to name,
-                    "email" to email,
-                    "androidId" to androidId,
-                    "tipoPerfil" to profileType
-                )
+            val ois = ObjectInputStream(socket.inputStream)
+            val resposta = ois.readObject() // TODO: Criar a classe de resposta (???)
 
-                userId?.let { id ->
-                    db.collection("usuarios").document(id)
-                        .set(userMap)
-                        .addOnSuccessListener {
-                            println("Dados do usuário salvos com sucesso!")
-                            // Cria 3 categorias automaticamente
-                        }
-                        .addOnFailureListener { e ->
-                            println("Erro ao salvar dados: ${e.message}")
-                        }
-                }
+            ois.close()
+            oos.close()
+            socket.close()
 
-            } else {
-                val exception = task.exception
-                val errorMessage = when ((exception as? com.google.firebase.auth.FirebaseAuthException)?.errorCode) {
-                    "ERROR_EMAIL_ALREADY_IN_USE" -> "Este e-mail já está em uso."
-                    "ERROR_INVALID_EMAIL" -> "E-mail inválido."
-                    "ERROR_WEAK_PASSWORD" -> "A senha deve ter pelo menos 6 caracteres."
-                    else -> "Erro ao criar conta: ${exception?.localizedMessage}"
-                }
-                onResult(errorMessage)
+            // Manda a resposta de volta
+            withContext(Dispatchers.Main) {
+                // TODO: Processar a resposta
+                onResult("Conta criada!")
+            }
 
+        } catch (e: Exception) {
+            e.printStackTrace()
+            withContext(Dispatchers.Main) {
+                onResult("Erro de conexão: ${e.message}")
             }
         }
+    }
 }
 
 
@@ -151,9 +126,9 @@ fun FazerRegistro(
 
     var showVerificationDialog by remember { mutableStateOf(false) }
 
-    var currentUser by remember { mutableStateOf<FirebaseAuth?>(null) }
-
     val context = LocalContext.current
+
+    val scope = rememberCoroutineScope()
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
@@ -162,7 +137,7 @@ fun FazerRegistro(
         modifier = Modifier.fillMaxSize()
     ) {
 
-        // Fundo
+        // Fundoa
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -388,13 +363,20 @@ fun FazerRegistro(
                     }
 
                     if (isValid) {
-                        val profileType = selectedProfileIndex?.let { profileOptions[it] } ?: ""
-                        createAccount(name, email.trim(), password, profileType, context) { result ->
-                            message = result
-                            currentUser = Firebase.auth
-                            if (result.contains("Verifique seu e-mail")) {
-                                showVerificationDialog = true
+                        if (!isInPreview) {
+                            val selectedProfile = profileOptions[selectedProfileIndex!!]
+
+                            // Chama a nova função de rede (Socket)
+                            scope.launch {
+                                createAccount(name.trim(), email.trim(), password, selectedProfile) { result ->
+                                    message = result
+                                    if (result.contains("Conta criada!")) {
+                                        onRegisterClick()
+                                    }
+                                }
                             }
+                        } else {
+                            message = "Modo Preview: Firebase desativado."
                         }
                     }
                 },

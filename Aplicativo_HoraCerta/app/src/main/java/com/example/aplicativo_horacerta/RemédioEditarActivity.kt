@@ -27,7 +27,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 
 class RemédioEditarActivity : ComponentActivity() {
-    private var medicamentoId: String? = null // Guarda o ID recebido
+    private var medicamentoId: String? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         medicamentoId = intent.getStringExtra("MEDICAMENTO_ID") // Pega o ID que a Home enviou
@@ -35,14 +35,14 @@ class RemédioEditarActivity : ComponentActivity() {
         setContent {
             Surface(color = Color.Black) {
                 RemédioEditarScreen(
-                    dadosIniciais = dadosDoRemedio, // Passa o objeto Medicamento
+                    dadosIniciais = dadosDoRemedio,
                     onBackClick = {
-                        finish() // volta para a Home
+                        finish()
                     },
                     onSaveClick = { nome, dia, horario, descricao ->
                         // TODO: Lógica para salvar o medicamento editado no Firebase
 
-                        finish() // volta para a Home
+                        finish()
                     }
                 )
             }

@@ -33,12 +33,11 @@ class RemédioCriarActivity : ComponentActivity() {
             Surface(color = Color.Black) {
                 RemédioCriarScreen(
                     onBackClick = {
-                        finish() // volta para a Home
+                        finish()
                     },
                     onSaveClick = { nome, dia, horario, descricao ->
                         // TODO: Lógica para salvar o novo medicamento no Firebase
-
-                        finish() // volta para a Home
+                        finish()
                     }
                 )
             }

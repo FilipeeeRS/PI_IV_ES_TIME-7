@@ -1,6 +1,6 @@
 package com.example.aplicativo_horacerta
 
-import android.content.Intent // Importante para a navegação
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,12 +27,12 @@ class InicioTelaActivity : ComponentActivity() {
             Surface(color = Color.Black) {
                 InicioTela(
                     onLoginClick = {
-                        // Ação: Iniciar a FazerLoginActivity
+                        // Ação: inicia FazerLoginActivity
                         val intent = Intent(this, FazerLoginActivity::class.java)
                         startActivity(intent)
                     },
                     onRegisterClick = {
-                        // Ação: Iniciar a FazerRegistroActivity
+                        // Ação: inicia FazerRegistroActivity
                         val intent = Intent(this, FazerRegistroActivity::class.java)
                         startActivity(intent)
                     }
@@ -76,7 +76,7 @@ fun InicioTela(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Texto central
+            // Texto principal
             Text(
                 text = "HoraCerta\nSeja Bem-vindo",
                 color = Color.White,

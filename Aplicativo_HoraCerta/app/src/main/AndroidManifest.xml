@@ -32,11 +32,18 @@
             android:exported="false"
             android:label="@string/title_activity_home_cuidador"
             android:theme="@style/Theme.Aplicativo_HoraCerta" />
+
         <activity
             android:name=".TermosIniciaisActivity"
-            android:exported="false"
+            android:exported="true"
             android:label="@string/title_activity_termos_iniciais"
-            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+            android:theme="@style/Theme.Aplicativo_HoraCerta">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
         <activity
             android:name=".InicioTelaActivity"
             android:exported="false"
@@ -48,15 +55,7 @@
         <activity
             android:name=".FazerLoginActivity"
             android:exported="false" />
-        <activity
-            android:name=".MainActivity"
-            android:exported="true">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
     </application>
 
 </manifest>
