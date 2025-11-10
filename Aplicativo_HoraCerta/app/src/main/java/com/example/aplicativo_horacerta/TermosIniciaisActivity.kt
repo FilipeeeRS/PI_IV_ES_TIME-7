@@ -85,12 +85,6 @@ fun TermosTela(
                 .align(Alignment.TopStart)
                 .padding(horizontal = 16.dp, vertical = 32.dp)
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.arrow_back),
-                contentDescription = "Voltar",
-                tint = Color.White,
-                modifier = Modifier.size(64.dp)
-            )
         }
 
         Column(

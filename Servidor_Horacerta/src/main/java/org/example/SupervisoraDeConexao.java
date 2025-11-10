@@ -4,30 +4,28 @@ import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
-
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.net.Socket;
 import java.util.ArrayList;
-
 import org.bson.Document;
+import org.bson.types.ObjectId;
 import io.github.cdimascio.dotenv.Dotenv;
 
 public class SupervisoraDeConexao extends Thread {
     private final Socket conexao;
     private final ArrayList<Parceiro> usuarios;
     private final ObjectOutputStream transmissor;
-    private final ObjectInputStream  receptor;
+    private final ObjectInputStream receptor;
     private Parceiro usuario;
 
     public SupervisoraDeConexao(
             Socket conexao,
             ArrayList<Parceiro> usuarios,
             ObjectOutputStream transmissor,
-            ObjectInputStream receptor) throws Exception
-    {
-        if (conexao==null)  throw new Exception("Conexao ausente");
-        if (usuarios==null) throw new Exception("Usuarios ausentes");
+            ObjectInputStream receptor) throws Exception {
+        if (conexao == null) throw new Exception("Conexao ausente");
+        if (usuarios == null) throw new Exception("Usuarios ausentes");
         this.conexao = conexao;
         this.usuarios = usuarios;
         this.transmissor = transmissor;
@@ -39,7 +37,9 @@ public class SupervisoraDeConexao extends Thread {
         try {
             this.usuario = new Parceiro(conexao, receptor, transmissor);
 
-            synchronized (usuarios) { usuarios.add(usuario); }
+            synchronized (usuarios) {
+                usuarios.add(usuario);
+            }
 
             for (;;) {
                 System.out.println("[SERVIDOR] Aguardando objeto do cliente...");
@@ -99,9 +99,7 @@ public class SupervisoraDeConexao extends Thread {
                     System.out.println("[SERVIDOR] Enviando resultado para " + email + ": " + mensagem);
                     this.usuario.receba(new Resultado(sucesso, mensagem));
                     System.out.println("[SERVIDOR] Resultado enviado.");
-                }
-
-                else if (comunicado instanceof PedidoDeCriarMedicamento pedido) {
+                } else if (comunicado instanceof PedidoDeCriarMedicamento pedido) {
                     System.out.println("[SERVIDOR] Recebido pedido de criar medicamento.");
                     boolean sucesso = pedido.executar();
 
@@ -113,9 +111,7 @@ public class SupervisoraDeConexao extends Thread {
                     }
 
                     this.usuario.receba(new Resultado(sucesso, mensagem)); // envia true ou false para o android
-                }
-
-                else if (comunicado instanceof PedidoDeListarMedicamentos pedido) {
+                } else if (comunicado instanceof PedidoDeListarMedicamentos pedido) {
                     System.out.println("[SERVIDOR] Listando medicamentos para: " + pedido.getIdUsuario());
 
                     String idUsuario = pedido.getIdUsuario();
@@ -145,9 +141,7 @@ public class SupervisoraDeConexao extends Thread {
                     System.out.println("[SERVIDOR] Encontrados " + lista.size() + " medicamentos.");
 
                     this.usuario.receba(new ResultadoListaMedicamentos(lista)); // Envia de volta para o android
-                }
-
-                else if (comunicado instanceof PedidoDeDeletarMedicamento pedido) {
+                } else if (comunicado instanceof PedidoDeDeletarMedicamento pedido) {
                     System.out.println("[SERVIDOR] Recebido pedido para deletar: " + pedido.getIdMedicamento());
 
                     String idParaDeletar = pedido.getIdMedicamento();
@@ -177,15 +171,28 @@ public class SupervisoraDeConexao extends Thread {
                     }
 
                     this.usuario.receba(new Resultado(sucesso, mensagem));
+                }
             }
 
         } catch (Exception e) {
             System.out.println("[SERVIDOR] Conexao encerrada: " + e);
             e.printStackTrace();
         } finally {
-            try { transmissor.close(); } catch (Exception ignore) {}
-            try { receptor.close(); }    catch (Exception ignore) {}
-            try { conexao.close(); }     catch (Exception ignore) {}
-            synchronized (usuarios) { usuarios.remove(usuario); }
+            try {
+                transmissor.close();
+            } catch (Exception ignore) {
+            }
+            try {
+                receptor.close();
+            } catch (Exception ignore) {
+            }
+            try {
+                conexao.close();
+            } catch (Exception ignore) {
+            }
+            synchronized (usuarios) {
+                usuarios.remove(usuario);
+            }
         }
     }
+}

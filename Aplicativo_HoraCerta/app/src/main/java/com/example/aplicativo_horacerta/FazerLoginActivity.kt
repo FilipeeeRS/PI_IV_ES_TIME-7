@@ -94,8 +94,8 @@ class FazerLoginActivity : ComponentActivity() {
 // Função de login com o servidor
 suspend fun performLogin(email: String, senha: String): ResultadoLogin? {
 
-    val SERVER_IP = "192.168.0.10"
-    val SERVER_PORT = 12345
+    val SERVER_IP = "10.0.116.3"
+    val SERVER_PORT = 3000
 
     val pedido = PedidoDeLogin(email, senha)
 

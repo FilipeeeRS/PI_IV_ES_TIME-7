@@ -60,8 +60,8 @@ class FazerRegistroActivity : ComponentActivity() {
 // Cria a conta
 suspend fun createAccount(nome: String, email: String, senha: String, profileType: String, onResult: (String) -> Unit) {
 
-    val SERVER_IP = "192.168.0.10"
-    val SERVER_PORT = 12345
+    val SERVER_IP = "10.0.116.3"
+    val SERVER_PORT = 3000
 
     val pedido = PedidoDeCadastro(nome, email, senha, profileType)
 

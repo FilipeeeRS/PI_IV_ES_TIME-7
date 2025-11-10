@@ -1,6 +1,6 @@
 package com.example.aplicativo_horacerta.network
 
-// Classe espelho de ResultadoLogin.java
+// Classe "Espelho" de ResultadoLogin.java
 data class ResultadoLogin(
     val status: String,
     val usuario: Usuario?
