@@ -36,7 +36,7 @@
         <activity
             android:name=".TermosIniciaisActivity"
             android:exported="true"
-            android:label="@string/title_activity_termos_iniciais"
+            android:label="@string/app_name"
             android:theme="@style/Theme.Aplicativo_HoraCerta">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

@@ -98,7 +98,7 @@ class FazerRegistroActivity : ComponentActivity() {
                     onRegisterAttempt = { nome, email, senha, profileType ->
                         handleRegistration(nome, email, senha, profileType)
                     },
-                  //  onRegisterSuccess = { /* Não é mais necessário, pois a Activity lida com a navegação */ },
+                    //  onRegisterSuccess = { /* Não é mais necessário, pois a Activity lida com a navegação */ },
                     onBackClick = { finish() }
                 )
             }
