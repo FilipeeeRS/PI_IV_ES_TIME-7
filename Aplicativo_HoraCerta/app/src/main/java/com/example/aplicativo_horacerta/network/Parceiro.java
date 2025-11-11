@@ -1,19 +1,21 @@
-package org.example;
+package com.example.aplicativo_horacerta.network;
+
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.Socket;
+
 import com.google.gson.Gson;
 
-
+/** Parceiro do lado do CLIENTE, trocando JSON por linha */
 public class Parceiro {
     private final Socket conexao;
     private final BufferedReader receptor;
     private final BufferedWriter transmissor;
     private final Gson gson = new Gson();
 
-
+    // buffer para um "peek" simples (não usado no fluxo atual, mas útil)
     private String proximoJson = null;
 
     public Parceiro(Socket conexao, BufferedReader receptor, BufferedWriter transmissor) throws Exception {
@@ -25,34 +27,36 @@ public class Parceiro {
         this.transmissor = transmissor;
     }
 
-
-    public void receba(Comunicado x) throws Exception {
+    /** Envia um Comunicado (será serializado em JSON, uma linha, com \n + flush). */
+    public void receba(Comunicado comunicado) throws Exception {
         try {
-            String json = gson.toJson(x);
+            String json = gson.toJson(comunicado);
             transmissor.write(json);
-            transmissor.write("\n");   // MUITO importante p/ readLine() do cliente
-            transmissor.flush();
+            transmissor.write("\n");     // IMPORTANTE: servidor espera fim de linha
+            transmissor.flush();         // garante que sai do buffer
         } catch (IOException e) {
             throw new Exception("Erro de transmissao: " + e.getMessage(), e);
         }
     }
 
-
-
+    /** Lê uma linha JSON do servidor e devolve como ComunicadoJson. */
     public Comunicado envie() throws Exception {
         try {
-            if (proximoJson == null) proximoJson = receptor.readLine(); // bloqueia até chegar \n
-            if (proximoJson == null) throw new Exception("Conexao encerrada pelo cliente");
+            if (proximoJson == null)
+                proximoJson = receptor.readLine();   // bloqueia até chegar \n ou fechar
+
+            if (proximoJson == null)
+                throw new Exception("Conexao encerrada pelo servidor");
 
             String json = proximoJson;
             proximoJson = null;
-            return new ComunicadoJson(json);
+            return new ComunicadoJson(json);         // sua classe embrulha o JSON cru
         } catch (IOException e) {
             throw new Exception("Erro de recepcao: " + e.getMessage(), e);
         }
     }
 
-    /** Fecha streams e socket (tenta flush antes) */
+    /** Fecha streams e socket. */
     public void adeus() throws Exception {
         try {
             try { transmissor.flush(); } catch (Exception ignored) {}
@@ -64,7 +68,9 @@ public class Parceiro {
         }
     }
 
-    // Helpers opcionais para JSON cru (se quiser usar)
+    // ---------- utilitários opcionais ----------
+
+    /** Envia uma string JSON já pronta (caso queira). */
     public void recebaJson(String json) throws Exception {
         try {
             transmissor.write(json);
@@ -75,9 +81,11 @@ public class Parceiro {
         }
     }
 
+    /** Lê a próxima linha crua (JSON bruto). */
     public String envieJson() throws Exception {
         try {
-            if (proximoJson == null) proximoJson = receptor.readLine();
+            if (proximoJson == null)
+                proximoJson = receptor.readLine();
             String json = proximoJson;
             proximoJson = null;
             return json;

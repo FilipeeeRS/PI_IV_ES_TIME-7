@@ -2,6 +2,7 @@ package com.example.aplicativo_horacerta
 
 import android.content.Intent
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -17,6 +18,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
@@ -26,31 +29,77 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalInspectionMode
+import com.example.aplicativo_horacerta.network.Parceiro
 import com.example.aplicativo_horacerta.network.PedidoDeCadastro
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 import java.net.Socket
+import androidx.lifecycle.lifecycleScope
+
 
 class FazerRegistroActivity : ComponentActivity() {
+    private lateinit var auth: FirebaseAuth
+
+    // Mantenha esta função fora do escopo do ComponentActivity, ou melhor,
+    // defina-a na Activity para que ela possa ser passada para o Composable.
+    private fun handleRegistration(nome: String, email: String, senha: String, profileType: String) {
+
+        // 1. CHAMA O FIREBASE AUTH
+        auth.createUserWithEmailAndPassword(email, senha)
+            .addOnCompleteListener(this) { task ->
+                if (task.isSuccessful) {
+                    val user = auth.currentUser
+                    val firebaseUid = user?.uid
+
+                    if (firebaseUid != null) {
+                        Toast.makeText(this, "Cadastro no Firebase OK. Enviando dados...", Toast.LENGTH_SHORT).show()
+
+                        // 2. CHAMA A REDE APENAS COM O UID
+                        // Precisamos de um CoroutineScope para chamar a função suspend
+                        lifecycleScope.launch {
+                            // O nome, email e profileType vêm da tela.
+                            // O UID substitui a senha.
+                            createAccount(nome.trim(), email.trim(), firebaseUid, profileType) { result ->
+                                // Atualize a mensagem da UI aqui, se possível
+                                if (result.contains("SUCESSO")) {
+                                    // Mudar de tela
+                                    val intent = Intent(this@FazerRegistroActivity, FazerLoginActivity::class.java)
+                                    startActivity(intent)
+                                    finish()
+                                } else {
+                                    // Mostrar erro da rede
+                                    Toast.makeText(this@FazerRegistroActivity, result, Toast.LENGTH_LONG).show()
+                                }
+                            }
+                        }
+                    } else {
+                        Toast.makeText(this, "Erro: UID não encontrado.", Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    // 3. ERRO DO FIREBASE
+                    Toast.makeText(this, "Falha no Registro: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                }
+            }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        auth = FirebaseAuth.getInstance()
         setContent {
             Surface(color = Color.Black) {
                 FazerRegistro(
-                    onRegisterClick = {
-                        // Ação: trocar de tela (login)
-                        val intent = Intent(this, FazerLoginActivity::class.java)
-                        startActivity(intent)
-                        finish()
+                    // Passamos a função que lida com o registro inteiro
+                    onRegisterAttempt = { nome, email, senha, profileType ->
+                        handleRegistration(nome, email, senha, profileType)
                     },
-                    onBackClick = {
-                        finish()
-                    }
+                  //  onRegisterSuccess = { /* Não é mais necessário, pois a Activity lida com a navegação */ },
+                    onBackClick = { finish() }
                 )
             }
         }
@@ -58,34 +107,29 @@ class FazerRegistroActivity : ComponentActivity() {
 }
 
 // Cria a conta
-suspend fun createAccount(nome: String, email: String, senha: String, profileType: String, onResult: (String) -> Unit) {
+suspend fun createAccount( nome: String, email: String, firebaseUid: String, profileType: String, onResult: (String) -> Unit) {
 
-    val SERVER_IP = "10.0.116.3"
+    val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
 
-    val pedido = PedidoDeCadastro(nome, email, senha, profileType)
+    val pedido = PedidoDeCadastro(nome, email, firebaseUid, profileType)
 
     // Roda a rede em background
     withContext(Dispatchers.IO) {
         try {
-            val socket = Socket(SERVER_IP, SERVER_PORT)
+            val conexao = Socket(SERVER_IP, SERVER_PORT)
+            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream()))
+            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream()))
 
-            val oos = ObjectOutputStream(socket.outputStream)
-            oos.writeObject(pedido)
-            oos.flush()
+            val servidor = Parceiro(conexao, receptor, transmissor)
 
-            val ois = ObjectInputStream(socket.inputStream)
-            val resposta = ois.readObject() // TODO: Criar a classe de resposta (???)
+            servidor.receba(pedido);
 
-            ois.close()
-            oos.close()
-            socket.close()
+            val resposta: Any? = servidor.envie();
 
-            // Manda a resposta de volta
-            withContext(Dispatchers.Main) {
-                // TODO: Processar a resposta
-                onResult("Conta criada!")
-            }
+            println("Resposta do servidor: $resposta")
+
+            conexao.close()
 
         } catch (e: Exception) {
             e.printStackTrace()
@@ -97,10 +141,12 @@ suspend fun createAccount(nome: String, email: String, senha: String, profileTyp
 }
 
 
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FazerRegistro(
-    onRegisterClick: () -> Unit = {},
+    onRegisterAttempt: (String, String, String, String) -> Unit,
     onBackClick: () -> Unit = {}
 ) {
 
@@ -212,7 +258,7 @@ fun FazerRegistro(
                             inactiveContentColor = Color.Black
                         )
                     ) {
-                        Text(label, fontSize = 16.sp,)
+                        Text(label, fontSize = 16.sp)
                     }
                 }
             }
@@ -366,15 +412,10 @@ fun FazerRegistro(
                         if (!isInPreview) {
                             val selectedProfile = profileOptions[selectedProfileIndex!!]
 
-                            // Chama a nova função de rede (Socket)
-                            scope.launch {
-                                createAccount(name.trim(), email.trim(), password, selectedProfile) { result ->
-                                    message = result
-                                    if (result.contains("Conta criada!")) {
-                                        onRegisterClick()
-                                    }
-                                }
-                            }
+                            // ➡️ CHAMA A FUNÇÃO QUE INICIA O PROCESSO FIREBASE/REDE
+                            onRegisterAttempt(name.trim(), email.trim(), password, selectedProfile)
+
+
                         } else {
                             message = "Modo Preview: Firebase desativado."
                         }
@@ -395,7 +436,7 @@ fun FazerRegistro(
         }
     }
 }
-
+/*
 @Preview(showSystemUi = true, showBackground = true)
 @Composable
 fun PreviewFazerRegistro() {
@@ -403,3 +444,5 @@ fun PreviewFazerRegistro() {
         FazerRegistro()
     }
 }
+
+ */

@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.compose.compiler)
-    //id("com.google.gms.google-services")
+    id("com.google.gms.google-services")
     //todo, excluir para preview
 }
 
@@ -82,4 +82,8 @@ dependencies {
 
     implementation("com.google.firebase:firebase-auth")
     implementation("com.google.firebase:firebase-firestore-ktx")
+
+    implementation("com.google.code.gson:gson:2.11.0")
+
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.7.0") // Use a versão mais recente
 }

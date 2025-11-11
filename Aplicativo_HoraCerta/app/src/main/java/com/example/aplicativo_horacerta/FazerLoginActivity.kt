@@ -27,13 +27,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.aplicativo_horacerta.network.Parceiro
 import com.example.aplicativo_horacerta.network.PedidoDeLogin
 import com.example.aplicativo_horacerta.network.ResultadoLogin
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.InputStreamReader
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
+import java.io.OutputStreamWriter
 import java.net.Socket
 
 class FazerLoginActivity : ComponentActivity() {
@@ -94,8 +99,14 @@ class FazerLoginActivity : ComponentActivity() {
 // Função de login com o servidor
 suspend fun performLogin(email: String, senha: String): ResultadoLogin? {
 
-    val SERVER_IP = "10.0.116.3"
+    val SERVER_IP = "172.20.10.7"
     val SERVER_PORT = 3000
+
+    val conexao = Socket(SERVER_IP, SERVER_PORT)
+    val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream()))
+    val receptor = BufferedReader(InputStreamReader(conexao.getInputStream()))
+
+    val servidor = Parceiro(conexao, receptor, transmissor)
 
     val pedido = PedidoDeLogin(email, senha)
 

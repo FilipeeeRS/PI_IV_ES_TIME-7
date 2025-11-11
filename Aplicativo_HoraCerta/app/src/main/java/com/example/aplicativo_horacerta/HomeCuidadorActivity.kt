@@ -215,7 +215,7 @@ fun HomeCuidador(
                             //  Deletar do servidor
                             val resultado = performDeleteMedicamento(medicamento.id.toString())
 
-                            if (resultado?.sucesso == true) {
+                            if (resultado?.isSucesso == true) {
                                 // Se deletou, remove da lista
                                 medicamentosList.remove(medicamento)
                                 Toast.makeText(context, "Medicamento deletado!", Toast.LENGTH_SHORT).show()
