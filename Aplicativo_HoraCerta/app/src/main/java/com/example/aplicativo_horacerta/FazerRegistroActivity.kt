@@ -29,12 +29,19 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import com.example.aplicativo_horacerta.network.PedidoDeCadastro
+import com.example.aplicativo_horacerta.network.Resultado
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.net.Socket
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import android.content.Context
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 class FazerRegistroActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -43,7 +50,6 @@ class FazerRegistroActivity : ComponentActivity() {
             Surface(color = Color.Black) {
                 FazerRegistro(
                     onRegisterClick = {
-                        // Ação: trocar de tela (login)
                         val intent = Intent(this, FazerLoginActivity::class.java)
                         startActivity(intent)
                         finish()
@@ -57,36 +63,43 @@ class FazerRegistroActivity : ComponentActivity() {
     }
 }
 
-// Cria a conta
-suspend fun createAccount(nome: String, email: String, senha: String, profileType: String, onResult: (String) -> Unit) {
-
+suspend fun createAccount(
+    nome: String,
+    email: String,
+    senha: String,
+    profileType: String,
+    context: Context,
+    onResult: (String) -> Unit
+) {
     val SERVER_IP = "10.0.116.3"
     val SERVER_PORT = 3000
-
     val pedido = PedidoDeCadastro(nome, email, senha, profileType)
 
-    // Roda a rede em background
     withContext(Dispatchers.IO) {
         try {
             val socket = Socket(SERVER_IP, SERVER_PORT)
-
             val oos = ObjectOutputStream(socket.outputStream)
             oos.writeObject(pedido)
             oos.flush()
 
             val ois = ObjectInputStream(socket.inputStream)
-            val resposta = ois.readObject() // TODO: Criar a classe de resposta (???)
+            val resposta = ois.readObject() as? Resultado
 
             ois.close()
             oos.close()
             socket.close()
 
-            // Manda a resposta de volta
             withContext(Dispatchers.Main) {
-                // TODO: Processar a resposta
-                onResult("Conta criada!")
+                if (resposta != null) {
+                    if (resposta.sucesso) {
+                        onResult("Conta criada!")
+                    } else {
+                        onResult(resposta.mensagem)
+                    }
+                } else {
+                    onResult("Erro: Resposta inválida do servidor.")
+                }
             }
-
         } catch (e: Exception) {
             e.printStackTrace()
             withContext(Dispatchers.Main) {
@@ -96,25 +109,20 @@ suspend fun createAccount(nome: String, email: String, senha: String, profileTyp
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FazerRegistro(
     onRegisterClick: () -> Unit = {},
     onBackClick: () -> Unit = {}
 ) {
-
-    // Preview
     val isInPreview = LocalInspectionMode.current
 
-    // Guardar o que o usuário digita
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
     var message by remember { mutableStateOf("") }
 
-    // Estado do perfil
     val profileOptions = listOf("Cuidador", "Idoso")
     var selectedProfileIndex by remember { mutableStateOf<Int?>(null) }
     var profileTypeError by remember { mutableStateOf<String?>(null) }
@@ -124,20 +132,17 @@ fun FazerRegistro(
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
-    var showVerificationDialog by remember { mutableStateOf(false) }
-
     val context = LocalContext.current
-
     val scope = rememberCoroutineScope()
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
 
-    Box(
-        modifier = Modifier.fillMaxSize()
-    ) {
+    val scrollState = rememberScrollState()
 
-        // Fundoa
+    Box(modifier = Modifier.fillMaxSize()) {
+
+        // Fundo
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -145,31 +150,15 @@ fun FazerRegistro(
             contentScale = ContentScale.Crop
         )
 
-        // Botão de Voltar
-        IconButton(
-            onClick = onBackClick,
-            modifier = Modifier
-                .align(Alignment.TopStart)
-                .padding(horizontal = 16.dp, vertical = 32.dp)
-        ) {
-            Icon(
-                painter = painterResource(id = R.drawable.arrow_back),
-                contentDescription = "Voltar",
-                tint = Color.White,
-                modifier = Modifier.size(64.dp)
-            )
-        }
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             Spacer(modifier = Modifier.height(50.dp))
 
-            // Logo
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo HoraCerta",
@@ -178,7 +167,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Texto central
             Text(
                 text = "HoraCerta\nFazer Registro",
                 color = Color.White,
@@ -189,16 +177,14 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(25.dp))
 
-            // Selecionar perfil
             Text(
                 text = "   Tipo de Perfil:",
                 color = Color.White,
                 fontSize = 16.sp,
                 modifier = Modifier.align(Alignment.Start)
             )
-            SingleChoiceSegmentedButtonRow(
-                modifier = Modifier.fillMaxWidth()
-            ) {
+
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
                 profileOptions.forEachIndexed { index, label ->
                     SegmentedButton(
                         modifier = Modifier.padding(horizontal = 6.dp),
@@ -212,10 +198,11 @@ fun FazerRegistro(
                             inactiveContentColor = Color.Black
                         )
                     ) {
-                        Text(label, fontSize = 16.sp,)
+                        Text(label, fontSize = 16.sp)
                     }
                 }
             }
+
             if (profileTypeError != null) {
                 Text(
                     text = profileTypeError!!,
@@ -227,7 +214,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Nome
             TextField(
                 value = name,
                 onValueChange = { name = it },
@@ -248,7 +234,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Email
             TextField(
                 value = email,
                 onValueChange = { email = it },
@@ -269,7 +254,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Senha
             TextField(
                 value = password,
                 onValueChange = { password = it },
@@ -278,12 +262,9 @@ fun FazerRegistro(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    val image = if (passwordVisible)
-                        Icons.Filled.Visibility
-                    else Icons.Filled.VisibilityOff
-
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
-                        Icon(imageVector = image, "Mostrar/Esconder Senha")
+                        Icon(imageVector = image, contentDescription = "Mostrar/Esconder Senha")
                     }
                 },
                 shape = RoundedCornerShape(24.dp),
@@ -300,7 +281,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Confirmar Senha
             TextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
@@ -309,12 +289,9 @@ fun FazerRegistro(
                 visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    val image = if (confirmPasswordVisible)
-                        Icons.Filled.Visibility
-                    else Icons.Filled.VisibilityOff
-
+                    val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
-                        Icon(imageVector = image, "Mostrar/Esconder Senha")
+                        Icon(imageVector = image, contentDescription = "Mostrar/Esconder Senha")
                     }
                 },
                 shape = RoundedCornerShape(24.dp),
@@ -329,13 +306,20 @@ fun FazerRegistro(
                 modifier = Modifier.fillMaxWidth()
             )
 
+            if (message.isNotBlank()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Text(
+                    text = message,
+                    color = if (message.contains("Conta criada!")) Color.Green else Color.Red,
+                    fontSize = 14.sp
+                )
+            }
+
             Spacer(modifier = Modifier.height(50.dp))
 
-            // Botão de Registrar
             Button(
                 onClick = {
                     var isValid = true
-
                     if (name.isBlank()) {
                         nameError = "Nome obrigatório"
                         isValid = false
@@ -365,10 +349,8 @@ fun FazerRegistro(
                     if (isValid) {
                         if (!isInPreview) {
                             val selectedProfile = profileOptions[selectedProfileIndex!!]
-
-                            // Chama a nova função de rede (Socket)
                             scope.launch {
-                                createAccount(name.trim(), email.trim(), password, selectedProfile) { result ->
+                                createAccount(name.trim(), email.trim(), password, selectedProfile, context) { result ->
                                     message = result
                                     if (result.contains("Conta criada!")) {
                                         onRegisterClick()
@@ -386,12 +368,25 @@ fun FazerRegistro(
                     .width(220.dp)
                     .height(70.dp)
             ) {
-                Text(
-                    text = "Registrar",
-                    color = Color.Black,
-                    fontSize = 22.sp
-                )
+                Text(text = "Registrar", color = Color.Black, fontSize = 22.sp)
             }
+
+            Spacer(modifier = Modifier.height(50.dp))
+        }
+
+        // Botão de Voltar
+        IconButton(
+            onClick = onBackClick,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(horizontal = 16.dp, vertical = 32.dp)
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.arrow_back),
+                contentDescription = "Voltar",
+                tint = Color.White,
+                modifier = Modifier.size(64.dp)
+            )
         }
     }
 }
