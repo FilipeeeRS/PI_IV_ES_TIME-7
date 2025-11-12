@@ -39,14 +39,10 @@ public class PedidoDeCadastro extends ComunicadoJson {
 
     public String getProfileType() { return this.profileType; }
 
-
-
     public boolean criarDocumento() {
         try {
-            // Validação consolidada: Se algum campo for nulo/vazio, lança exceção.
             if (isBlank(nome) || isBlank(email) || isBlank(firebaseUid) || isBlank(profileType))
                 throw new IllegalArgumentException("Campos obrigatórios ausentes");
-
 
             Dotenv dotenv = Dotenv.load();
             String uri = dotenv.get("MONGO_URI");
@@ -55,6 +51,18 @@ public class PedidoDeCadastro extends ComunicadoJson {
             try (MongoClient client = MongoClients.create(uri)) {
                 MongoDatabase db = client.getDatabase(dbName);
                 MongoCollection<Document> col = db.getCollection("usuario");
+
+                Document filtroEmail = new Document("email", this.email);
+                if (col.find(filtroEmail).first() != null) {
+                    System.err.println("Erro: Email já cadastrado.");
+                    return false;
+                }
+
+                Document filtroUid = new Document("firebase_uid", this.firebaseUid);
+                if (col.find(filtroUid).first() != null) {
+                    System.err.println("Erro: UID do Firebase já cadastrado.");
+                    return false;
+                }
 
 
                 Document doc = new Document("firebase_uid", this.firebaseUid)
@@ -66,17 +74,13 @@ public class PedidoDeCadastro extends ComunicadoJson {
                 return true;
             }
         } catch (IllegalArgumentException e) {
-
             System.err.println("Erro de Validação: " + e.getMessage());
             return false;
         } catch (Exception e) {
-            // Trata erros de MongoDB ou conexão
             e.printStackTrace();
             return false;
         }
     }
-
-
 
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
