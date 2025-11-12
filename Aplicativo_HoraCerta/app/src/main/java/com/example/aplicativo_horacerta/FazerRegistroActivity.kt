@@ -2,6 +2,7 @@ package com.example.aplicativo_horacerta
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -41,6 +42,8 @@ import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.Socket
 import androidx.lifecycle.lifecycleScope
+import org.json.JSONException
+import org.json.JSONObject
 
 
 class FazerRegistroActivity : ComponentActivity() {
@@ -67,13 +70,19 @@ class FazerRegistroActivity : ComponentActivity() {
                             // O UID substitui a senha.
                             createAccount(nome.trim(), email.trim(), firebaseUid, profileType) { result ->
                                 // Atualize a mensagem da UI aqui, se possível
-                                if (result.contains("SUCESSO")) {
-                                    // Mudar de tela
-                                    val intent = Intent(this@FazerRegistroActivity, FazerLoginActivity::class.java)
-                                    startActivity(intent)
-                                    finish()
-                                } else {
-                                    // Mostrar erro da rede
+                                try {
+                                    val jsonExterno = JSONObject(result)
+                                    val jsonInternoString = jsonExterno.getString("operacao")
+                                    val jsonInterno = JSONObject(jsonInternoString)
+                                    val sucesso = jsonInterno.getBoolean("resultado")
+                                    if (sucesso) {
+                                        val intent = Intent(this@FazerRegistroActivity, FazerLoginActivity::class.java)
+                                        startActivity(intent)
+                                        finish()
+                                    } else {
+                                        Toast.makeText(this@FazerRegistroActivity, "Falha: Usuário já existe", Toast.LENGTH_LONG).show()
+                                    }
+                                } catch (e: JSONException) {
                                     Toast.makeText(this@FazerRegistroActivity, result, Toast.LENGTH_LONG).show()
                                 }
                             }
@@ -107,27 +116,31 @@ class FazerRegistroActivity : ComponentActivity() {
 }
 
 // Cria a conta
-suspend fun createAccount( nome: String, email: String, firebaseUid: String, profileType: String, onResult: (String) -> Unit) {
-
+suspend fun createAccount(
+    nome: String,
+    email: String,
+    firebaseUid: String,
+    profileType: String,
+    onResult: (String) -> Unit
+) {
     val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
 
     val pedido = PedidoDeCadastro(nome, email, firebaseUid, profileType)
 
-    // Roda a rede em background
     withContext(Dispatchers.IO) {
         try {
             val conexao = Socket(SERVER_IP, SERVER_PORT)
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream()))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream()))
-
             val servidor = Parceiro(conexao, receptor, transmissor)
 
-            servidor.receba(pedido);
-
-            val resposta: Any? = servidor.envie();
-
-            println("Resposta do servidor: $resposta")
+            servidor.receba(pedido)
+            val resposta: Any? = servidor.envie()
+            // Roda a rede em background
+            withContext(Dispatchers.Main) {
+                onResult(resposta.toString())
+            }
 
             conexao.close()
 
