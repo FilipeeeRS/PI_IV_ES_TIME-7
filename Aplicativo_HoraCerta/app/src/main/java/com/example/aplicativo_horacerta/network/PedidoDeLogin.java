@@ -5,25 +5,27 @@ import com.google.gson.annotations.SerializedName;
 public class PedidoDeLogin extends ComunicadoJson {
     private static final long serialVersionUID = 1L;
 
-    // O cliente manda "login" (email). Mapeamos para o campo email.
+
     @SerializedName("login")
-    private String login;
+    private String email;
 
-    private String senha;
+    @SerializedName("firebaseUid")
+    private String firebaseUid;
 
-    // Construtor sem args: necessário para o Gson
+
     public PedidoDeLogin() {
         super("Login");
     }
 
-    public PedidoDeLogin(String login, String senha) {
+    public PedidoDeLogin(String email, String firebaseUid) {
         super("Login");
-        if (login == null || login.isBlank()) throw new IllegalArgumentException("Login (email) inválido");
-        if (senha == null || senha.isBlank()) throw new IllegalArgumentException("Senha inválida");
-        this.login = login.trim().toLowerCase(); // normaliza
-        this.senha = senha;
+        if (email == null || email.isBlank()) throw new IllegalArgumentException("Login (email) inválido");
+        // Ajuste a mensagem para refletir que é o UID, não a Senha
+        if (firebaseUid == null || firebaseUid.isBlank()) throw new IllegalArgumentException("UID inválido");
+        this.email = email.trim().toLowerCase(); // normaliza
+        this.firebaseUid = firebaseUid;
     }
 
-    public String getEmail() { return login; }
-    public String getSenha() { return senha; }
+    public String getEmail() { return email; }
+    public String getFirebaseUid() { return firebaseUid; }
 }
