@@ -13,14 +13,49 @@
         android:theme="@style/Theme.Aplicativo_HoraCerta"
         tools:targetApi="31">
         <activity
-            android:name=".MainActivity"
-            android:exported="true">
+            android:name=".RemédioEditarActivity"
+            android:exported="false"
+            android:label="@string/title_activity_remédio_editar"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
+            android:name=".RemédioCriarActivity"
+            android:exported="false"
+            android:label="@string/title_activity_remédio_criar"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
+            android:name=".AcessibilidadeActivity"
+            android:exported="false"
+            android:label="@string/title_activity_acessibilidade"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
+            android:name=".HomeCuidadorActivity"
+            android:exported="false"
+            android:label="@string/title_activity_home_cuidador"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+
+        <activity
+            android:name=".TermosIniciaisActivity"
+            android:exported="true"
+            android:label="@string/app_name"
+            android:theme="@style/Theme.Aplicativo_HoraCerta">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <activity
+            android:name=".InicioTelaActivity"
+            android:exported="false"
+            android:label="@string/title_activity_inicio_tela"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
+            android:name=".FazerRegistroActivity"
+            android:exported="false" />
+        <activity
+            android:name=".FazerLoginActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

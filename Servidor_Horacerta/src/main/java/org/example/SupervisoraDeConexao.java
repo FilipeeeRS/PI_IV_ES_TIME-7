@@ -1,82 +1,95 @@
 package org.example;
 
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
-import java.net.Socket;
-import java.util.ArrayList;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.util.*;
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 
-public class SupervisoraDeConexao extends Thread {
-    private final Socket conexao;
-    private final ArrayList<Parceiro> usuarios;
-    private final ObjectOutputStream transmissor;
-    private final ObjectInputStream  receptor;
-    private Parceiro usuario;
 
-    public SupervisoraDeConexao(
-            Socket conexao,
-            ArrayList<Parceiro> usuarios,
-            ObjectOutputStream transmissor,
-            ObjectInputStream receptor) throws Exception
+public class SupervisoraDeConexao extends Thread
+{
+    private Parceiro            usuario;
+    private Socket              conexao;
+    private ArrayList<Parceiro> usuarios;
+    private Gson gson;
+
+
+    public SupervisoraDeConexao
+            (Socket conexao, ArrayList<Parceiro> usuarios)
+            throws Exception
     {
-        if (conexao==null)  throw new Exception("Conexao ausente");
-        if (usuarios==null) throw new Exception("Usuarios ausentes");
-        this.conexao = conexao;
+        if (conexao==null)
+            throw new Exception ("Conexao ausente");
+
+        if (usuarios==null)
+            throw new Exception ("Usuarios ausentes");
+
+        this.conexao  = conexao;
         this.usuarios = usuarios;
-        this.transmissor = transmissor;
-        this.receptor = receptor;
+        this.gson     = new Gson();
     }
 
-    @Override
-    public void run() {
-        try {
-            this.usuario = new Parceiro(conexao, receptor, transmissor);
+    public void run ()
+    {
+        try{
+            BufferedWriter transmissor = new BufferedWriter(
+                    new OutputStreamWriter(this.conexao.getOutputStream(), StandardCharsets.UTF_8));
+            BufferedReader receptor = new BufferedReader(
+                    new InputStreamReader(this.conexao.getInputStream(), StandardCharsets.UTF_8));
 
-            synchronized (usuarios) { usuarios.add(usuario); }
+            this.usuario =
+                    new Parceiro (this.conexao,
+                            receptor,
+                            transmissor);
 
-            for (;;) {
-                System.out.println("[SERVIDOR] Aguardando objeto do cliente...");
+            synchronized (this.usuarios)
+            {
+                this.usuarios.add (this.usuario);
+            }
 
-                Comunicado comunicado;
-                try {
-                    comunicado = this.usuario.envie();
-                } catch (Exception e) {
-                    System.out.println("[SERVIDOR] Cliente desconectou: " + e.getMessage());
-                    break;
-                }
+            for(;;){
+                ComunicadoJson comunicadoJson = (ComunicadoJson) this.usuario.envie ();
 
-                if (comunicado == null) continue;
+                if (comunicadoJson==null)
+                    return;
 
-                System.out.println("[SERVIDOR] Recebido: " + comunicado.getClass().getSimpleName());
+                String json = comunicadoJson.getJson();
+                JsonObject obj = gson.fromJson(json, JsonObject.class);
+                String tipo = obj.get("operacao").getAsString();
+                boolean resultado;
 
-                if (comunicado instanceof PedidoDeCadastro pedido) {
-                    String login = pedido.getLogin();
-                    String senha = pedido.getSenha();
+                switch (tipo) {
+                    case "PedidoParaSair":
 
-                    boolean sucesso;
-                    String mensagem;
-
-                    if (login == null || login.isBlank() || senha == null || senha.isBlank()) {
-                        sucesso=false; mensagem="Login/senha inválidos.";
-                    } else if (Servidor.CADASTROS.containsKey(login)) {
-                        sucesso=false; mensagem="Login já existe.";
-                    } else {
-                        Servidor.CADASTROS.put(login, senha);
-                        sucesso=true;  mensagem="Cadastro realizado com sucesso.";
-                    }
-
-                    System.out.println("[SERVIDOR] Enviando resultado para " + login + ": " + mensagem);
-                    this.usuario.receba(new Resultado(sucesso, mensagem)); // faz flush
-                    System.out.println("[SERVIDOR] Resultado enviado.");
+                        synchronized (this.usuarios) {
+                            resultado = this.usuarios.remove(this.usuario);
+                        }
+                        this.usuario.receba(new ResultadoOperacao(resultado,"LogOut"));
+                        this.usuario.adeus();
+                        return;
+                    case "Cadastro":
+                        PedidoDeCadastro cadastro = gson.fromJson(json, PedidoDeCadastro.class);
+                        resultado = cadastro.criarDocumento();
+                        this.usuario.receba(new ResultadoOperacao(resultado, "ResultadoCadastro"));
+                        break;
+                    case "Login":
+                        PedidoDeLogin login = gson.fromJson(json, PedidoDeLogin.class);
+                        Usuario user = login.getUserData();
+                        boolean userFound = user != null;
+                        this.usuario.receba(new ResultadoLogin(userFound,"ResultadoLogin", user));
+                        break;
+                    default:
+                        System.err.println("Comunicado desconhecido: " + tipo);
+                        break;
                 }
             }
-        } catch (Exception e) {
-            System.out.println("[SERVIDOR] Conexao encerrada: " + e);
-            e.printStackTrace();
-        } finally {
-            try { transmissor.close(); } catch (Exception ignore) {}
-            try { receptor.close(); }    catch (Exception ignore) {}
-            try { conexao.close(); }     catch (Exception ignore) {}
-            synchronized (usuarios) { usuarios.remove(usuario); }
+        }catch(Exception erro){
+            System.err.println("Erro de supervisao: " + erro.getMessage());
+            try { if (usuario != null) usuario.adeus(); } catch (Exception ignored) {}
         }
+
     }
+
 }

@@ -11,7 +11,7 @@ Integrantes:
   
 Orientadores:
 - Professora Renata Arantes
-- Professor
+- Professor André Luis dos Reis de Carvalho
 
 TEMA DO PROJETO:  Gerenciador de Medicamentos com Monitoramento Remoto
 -------------------------------

@@ -1,40 +1,88 @@
 package org.example;
 
-public class PedidoDeCadastro extends Comunicado
-{
-    private static final long serialVersionUID = 1L;
+import com.google.gson.annotations.SerializedName;
+import io.github.cdimascio.dotenv.Dotenv;
+import com.mongodb.client.*;
+import org.bson.Document;
+
+public class PedidoDeCadastro extends ComunicadoJson {
+
+
+    @SerializedName("nome")
     private String nome;
-    private String login;
-    private String senha;
 
-    public PedidoDeCadastro(String nome, String login, String senha)
-    {
-        if (nome == null || nome.isBlank())
-            throw new IllegalArgumentException("nome inválido");
 
-        if (login == null || login.isBlank())
-            throw new IllegalArgumentException("login inválido");
+    @SerializedName("email")
+    private String email;
 
-        if (senha == null || senha.isBlank())
-            throw new IllegalArgumentException("senha inválida");
 
-        this.nome  = nome;
-        this.login = login;
-        this.senha = senha;
+    @SerializedName("firebaseUid")
+    private String firebaseUid;
+
+
+    @SerializedName("profileType")
+    private String profileType;
+
+    public PedidoDeCadastro() {
+        super("Cadastro"); // Garante que a operação seja identificada
     }
 
-    public String getNome()  { return nome;  }
-    public String getLogin() { return login; }
-    public String getSenha() { return senha; } // se preferir, não exponha a senha
 
-    @Override
-    public String toString()
-    {
-        // evita expor a senha em logs
-        return "PedidoDeCadastro{" +
-                "nome='" + this.nome + '\'' +
-                ", login='" + this.login + '\'' +
-                ", senha='***'" +
-                '}';
+    public String getNome() { return this.nome; }
+
+
+    public String getEmail() { return this.email; }
+
+
+    public String getFirebaseUid() { return this.firebaseUid; }
+
+
+    public String getProfileType() { return this.profileType; }
+
+    public boolean criarDocumento() {
+        try {
+            if (isBlank(nome) || isBlank(email) || isBlank(firebaseUid) || isBlank(profileType))
+                throw new IllegalArgumentException("Campos obrigatórios ausentes");
+
+            Dotenv dotenv = Dotenv.load();
+            String uri = dotenv.get("MONGO_URI");
+            String dbName = dotenv.get("MONGO_DATABASE", "sample_horacerta");
+
+            try (MongoClient client = MongoClients.create(uri)) {
+                MongoDatabase db = client.getDatabase(dbName);
+                MongoCollection<Document> col = db.getCollection("usuario");
+
+                Document filtroEmail = new Document("email", this.email);
+                if (col.find(filtroEmail).first() != null) {
+                    System.err.println("Erro: Email já cadastrado.");
+                    return false;
+                }
+
+                Document filtroUid = new Document("firebase_uid", this.firebaseUid);
+                if (col.find(filtroUid).first() != null) {
+                    System.err.println("Erro: UID do Firebase já cadastrado.");
+                    return false;
+                }
+
+
+                Document doc = new Document("firebase_uid", this.firebaseUid)
+                        .append("nome", nome)
+                        .append("email", email)
+                        .append("profileType", profileType);
+
+                col.insertOne(doc);
+                return true;
+            }
+        } catch (IllegalArgumentException e) {
+            System.err.println("Erro de Validação: " + e.getMessage());
+            return false;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
     }
 }
