@@ -30,6 +30,7 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Check
@@ -48,6 +49,7 @@ import java.net.Socket
 
 
 import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.outlined.AddCircleOutline
 
 
 class HomeCuidadorActivity : ComponentActivity() {
@@ -244,19 +246,42 @@ fun HomeCuidador(
             }
         },
         floatingActionButton = {
-            IconButton(
-                onClick = onAccessibilityClick,
-                modifier = Modifier.size(56.dp)
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Bottom
             ) {
-                Icon(
-                    imageVector = Icons.Outlined.Info,
-                    contentDescription = "Acessibilidade",
-                    modifier = Modifier.size(100.dp),
-                    tint = Color.Black
-                )
+                // Botão Acessibilidade
+                IconButton(
+                    onClick = onAccessibilityClick,
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.Info,
+                        contentDescription = "Acessibilidade",
+                        modifier = Modifier.size(100.dp),
+                        tint = Color.Black
+                    )
+                }
+
+                IconButton(
+                    onClick = {
+                        // Navega para a tela de "conectar a idoso" todo
+                    },
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.AddCircleOutline,
+                        contentDescription = "Conectar a Idoso",
+                        modifier = Modifier.size(100.dp),
+                        tint = Color.Black
+                    )
+                }
             }
         },
-        floatingActionButtonPosition = FabPosition.Start
+        floatingActionButtonPosition = FabPosition.Center
 
     ) { paddingValues ->
         HorizontalPager(

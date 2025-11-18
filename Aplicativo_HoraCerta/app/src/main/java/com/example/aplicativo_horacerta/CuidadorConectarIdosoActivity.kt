@@ -1,14 +1,15 @@
 package com.example.aplicativo_horacerta
 
-import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material3.*
@@ -26,17 +27,18 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.text.style.TextAlign
 
-class AcessibilidadeActivity : ComponentActivity() {
-    private var profileType: String = "CUIDADOR"
+class CuidadorConectarIdosoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        profileType = intent.getStringExtra("PERFIL_USUARIO") ?: "CUIDADOR"
         setContent {
             Surface(color = Color.Black) {
-                AcessibilidadeScreen(
-                    profileType = profileType,
+                CuidadorConectarIdosoScreen(
                     onBackClick = {
-                        finish()
+                        finish() // Volta para a Home
+                    },
+                    onInviteClick = { email ->
+                        // TODO: Lógica de enviar convite (Socket)
+                        // ex: createConnection(email) ...
                     }
                 )
             }
@@ -45,13 +47,16 @@ class AcessibilidadeActivity : ComponentActivity() {
 }
 
 @Composable
-fun AcessibilidadeScreen(
-    profileType: String,
-    onBackClick: () -> Unit
+fun CuidadorConectarIdosoScreen(
+    onBackClick: () -> Unit,
+    onInviteClick: (String) -> Unit
 ) {
+    var emailIdoso by remember { mutableStateOf("") }
+
     val titleBarColor = Color(0xFFEEEEEE)
-    val cardBackgroundColor = Color(0xFFF0F0F0)
     val contentColor = Color.White
+    val cardBackgroundColor = Color(0xFFF0F0F0)
+    val buttonColor = Color.Black
 
     Scaffold(
         topBar = {
@@ -81,13 +86,14 @@ fun AcessibilidadeScreen(
                         )
                         Spacer(modifier = Modifier.width(16.dp))
                         Text(
-                            text = profileType.uppercase(),
+                            text = "CUIDADOR",
                             color = Color.White,
                             fontSize = 30.sp,
                             fontWeight = FontWeight.Bold
                         )
                     }
                 }
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -97,7 +103,7 @@ fun AcessibilidadeScreen(
                     horizontalArrangement = Arrangement.Center
                 ) {
                     Text(
-                        text = "ACESSIBILIDADE",
+                        text = "CONECTAR IDOSO",
                         color = Color.Black,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold
@@ -106,15 +112,18 @@ fun AcessibilidadeScreen(
             }
         }
     ) { paddingValues ->
+
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(contentColor)
+                .verticalScroll(rememberScrollState()) // Rolagem se precisar
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
 
+            // Botão Voltar
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier.align(Alignment.Start)
@@ -122,7 +131,7 @@ fun AcessibilidadeScreen(
                 Icon(
                     imageVector = Icons.Filled.ArrowBack,
                     contentDescription = "Voltar",
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(32.dp),
                     tint = Color.Black
                 )
             }
@@ -130,60 +139,73 @@ fun AcessibilidadeScreen(
             Spacer(modifier = Modifier.height(16.dp))
 
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .defaultMinSize(minHeight = 400.dp),
+                modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = cardBackgroundColor)
             ) {
                 Column(
                     modifier = Modifier
-                        .padding(24.dp)
-                        .fillMaxWidth(),
-                    horizontalAlignment = Alignment.CenterHorizontally
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.Start
                 ) {
 
-                    when (profileType.uppercase()) {
-                        "CUIDADOR" -> CuidadorAcessibilidadeContent()
-                        "IDOSO" -> IdosoAcessibilidadeContent()
-                    }
+                    Text(
+                        "ADICIONAR IDOSO (POR EMAIL)",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.Black
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    TextField(
+                        value = emailIdoso,
+                        onValueChange = { emailIdoso = it },
+                        label = { Text("Email do Idoso") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.White,
+                            unfocusedContainerColor = Color.White
+                        )
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        "Mais funcionalidades, serão adicionadas no futuro.",
-                        fontSize = 18.sp,
-                        color = Color.DarkGray,
+                        "Atualmente você pode\nconvidar apenas 1 idoso.",
+                        fontSize = 14.sp,
+                        color = Color.Black,
+                        modifier = Modifier.align(Alignment.CenterHorizontally),
                         textAlign = TextAlign.Center
                     )
+
+                    Spacer(modifier = Modifier.height(24.dp))
+
+                    Button(
+                        onClick = { onInviteClick(emailIdoso) },
+                        modifier = Modifier
+                            .align(Alignment.CenterHorizontally)
+                            .height(50.dp)
+                            .width(150.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = buttonColor)
+                    ) {
+                        Text(
+                            "Convidar",
+                            fontSize = 18.sp
+                        )
+                    }
                 }
             }
         }
     }
 }
 
-// Tela cuidador
+@Preview(showSystemUi = true, showBackground = true)
 @Composable
-fun CuidadorAcessibilidadeContent() {
-}
-
-// Tela idoso
-@Composable
-fun IdosoAcessibilidadeContent() {
-}
-
-@Preview(showSystemUi = true, showBackground = true, name = "Acessibilidade (Cuidador)")
-@Composable
-fun PreviewAcessibilidadeScreenCuidador() {
+fun PreviewCuidadorConectarIdosoScreen() {
     Surface(color = Color.White) {
-        AcessibilidadeScreen(profileType = "CUIDADOR", onBackClick = {})
-    }
-}
-
-@Preview(showSystemUi = true, showBackground = true, name = "Acessibilidade (Idoso)")
-@Composable
-fun PreviewAcessibilidadeScreenIdoso() {
-    Surface(color = Color.White) {
-        AcessibilidadeScreen(profileType = "IDOSO", onBackClick = {})
+        CuidadorConectarIdosoScreen(onBackClick = {}, onInviteClick = {})
     }
 }
