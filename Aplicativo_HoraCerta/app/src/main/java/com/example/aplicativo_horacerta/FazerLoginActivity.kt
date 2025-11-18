@@ -1,6 +1,6 @@
 package com.example.aplicativo_horacerta
 
-import android.R.id.message
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -26,7 +26,6 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.aplicativo_horacerta.network.Parceiro
@@ -38,25 +37,63 @@ import kotlinx.coroutines.withContext
 import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
 import java.io.OutputStreamWriter
 import java.net.Socket
-
 import androidx.lifecycle.lifecycleScope
-
-// Outras importações
 import com.google.firebase.auth.FirebaseAuth
-
+import com.google.gson.Gson
 
 
 class FazerLoginActivity : ComponentActivity() {
 
     private lateinit var auth: FirebaseAuth
 
+    companion object {
+        const val PREFS_NAME = "AuthPrefs"
+        const val KEY_USER_UID = "USER_UID"
+        const val KEY_PROFILE_TYPE = "PROFILE_TYPE"
+    }
+
+    /** Verifica se há uma sessão Firebase e dados de perfil salvos no SharedPreferences. */
+    private fun checkIfAlreadyLoggedIn() {
+        val currentUser = auth.currentUser
+        val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+        // Verifica se o Firebase tem um usuário logado E se salvamos o tipo de perfil
+        if (currentUser != null && prefs.contains(KEY_PROFILE_TYPE)) {
+
+            val uid = prefs.getString(KEY_USER_UID, null)
+            val profileType = prefs.getString(KEY_PROFILE_TYPE, null)
+
+            // Redireciona imediatamente se os dados essenciais estiverem presentes
+            if (uid != null && profileType != null) {
+                Toast.makeText(this, "Sessão restaurada. Bem-vindo(a) de volta.", Toast.LENGTH_SHORT).show()
+
+                navigateToHome(uid, profileType)
+            }
+        }
+    }
+
+    /** Encapsula a lógica de navegação condicional. */
+    private fun navigateToHome(uid: String, profileType: String) {
+        val nextActivity = when (profileType) {
+            "Cuidador" -> HomeCuidadorActivity::class.java
+            "Idoso" -> HomeIdosoActivity::class.java
+            else -> {
+                Toast.makeText(this, "Erro: Perfil inválido ($profileType).", Toast.LENGTH_LONG).show()
+                return // Impede a navegação
+            }
+        }
+
+        val intent = Intent(this, nextActivity)
+        // Passa os dados para a próxima Activity
+        intent.putExtra(KEY_USER_UID, uid)
+        intent.putExtra(KEY_PROFILE_TYPE, profileType)
+        startActivity(intent)
+        finish() // Fecha a Activity de Login para que o usuário não possa voltar
+    }
 
     private fun handleLogin(email: String, senha: String) {
-
 
         auth.signInWithEmailAndPassword(email.trim(), senha.trim())
             .addOnCompleteListener(this) { task ->
@@ -67,7 +104,6 @@ class FazerLoginActivity : ComponentActivity() {
                     if (firebaseUid != null) {
                         Toast.makeText(this, "Login Firebase OK. Buscando Perfil...", Toast.LENGTH_SHORT).show()
 
-                        // 3. SE O FIREBASE VALIDOU, CHAMA O SERVIDOR COM O UID
                         lifecycleScope.launch {
 
                             doLogin(email.trim(), firebaseUid) { result ->
@@ -81,27 +117,24 @@ class FazerLoginActivity : ComponentActivity() {
                                         val uid = parts[1]
                                         val profileType = parts[2]
 
+
+                                        val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                                        prefs.edit().apply {
+                                            putString(KEY_USER_UID, uid)
+                                            putString(KEY_PROFILE_TYPE, profileType)
+                                            apply() // Aplica a mudança
+                                        }
+
                                         Toast.makeText(context, "Login OK. Perfil: $profileType", Toast.LENGTH_LONG).show()
 
-                                        // 5. NAVEGAÇÃO CONDICIONAL (exemplo simplificado)
-                                        if (profileType == "Cuidador") {
-                                            val intent = Intent(context, HomeCuidadorActivity::class.java)
-                                            // Opcional: passar dados para a próxima tela
-                                            intent.putExtra("USER_UID", uid)
-                                            intent.putExtra("PROFILE_TYPE", profileType)
 
-                                            startActivity(intent)
-                                            finish()
-                                        } else {
-                                            // TODO: Navegar para HomeIdosoActivity
-                                            Toast.makeText(context, "Perfil Idoso detectado. Navegação pendente.", Toast.LENGTH_LONG).show()
-                                        }
+                                        navigateToHome(uid, profileType)
 
                                     } else {
                                         Toast.makeText(context, "Erro: Resposta do servidor incompleta.", Toast.LENGTH_LONG).show()
                                     }
                                 } else {
-                                    // 6. Tratamento de Falha de Rede/Servidor
+                                    // ... (Tratamento de Falha de Rede/Servidor) ...
                                     val errorMessage = when {
                                         result.startsWith("FALHA:") -> "Servidor: " + result.substringAfter("FALHA:").trim()
                                         result.startsWith("ERRO_CONEXAO:") -> "Falha na conexão com o servidor. Tente novamente."
@@ -121,11 +154,16 @@ class FazerLoginActivity : ComponentActivity() {
             }
     }
 
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         // 8. Inicializa o Firebase Auth
         auth = FirebaseAuth.getInstance()
+
+
+        checkIfAlreadyLoggedIn()
+
 
         setContent {
             Surface(color = Color.Black) {
@@ -133,52 +171,77 @@ class FazerLoginActivity : ComponentActivity() {
                     onLoginAttempt = { email, senha ->
                         handleLogin(email, senha)
                     },
-                    // ... outras funções de navegação
+                    onBackClick = { finish() } // Ações de navegação simples
                 )
             }
         }
     }
 }
 
+
+// Crie esta Data Class para mapear o JSON externo
+data class ComunicadoWrapper(
+    val operacao: String
+)
 // Função suspensa para realizar o Login via Socket
 suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Unit) {
 
     val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000 // Verifique a porta correta do seu servidor
+    val SERVER_PORT = 3000
+    val gson = Gson()
 
-    // ✅ CORREÇÃO APLICADA: Cria o PedidoDeLogin com email e UID
     val pedido = PedidoDeLogin(email, firebaseUid)
 
     withContext(Dispatchers.IO) {
-        var servidor: Parceiro? = null // Assumindo que Parceiro é sua classe de Socket
+        var servidor: Parceiro? = null
         try {
+
+
             val conexao = Socket(SERVER_IP, SERVER_PORT)
+
+
 
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8))
 
-            // Assumindo que Parceiro é sua classe de wrapper de comunicação Socket
             servidor = Parceiro(conexao, receptor, transmissor)
 
             servidor.receba(pedido)
 
-            val resposta = servidor.envie() // Assumindo que envie() retorna o ComunicadoJson
 
-            // Aqui você deve tratar a resposta do servidor (ResultadoLogin ou ResultadoOperacao)
-            // Se a resposta for um String (como no seu código original), use-a diretamente
-            val result = resposta?.toString() ?: "ERRO_CONEXAO:Resposta nula"
+            val resposta = servidor.envie()
+            val jsonBruto = resposta?.toString() ?: ""
 
-            // O resultado é passado de volta para a Activity na thread principal
+
+
+
+            val wrapper = gson.fromJson(jsonBruto, ComunicadoWrapper::class.java)
+
+            val jsonInterno = wrapper.operacao
+
+
+            val resultadoLogin = gson.fromJson(jsonInterno, ResultadoLogin::class.java)
+
+
+            val result: String = if (resultadoLogin.isSuccessful) {
+
+                "SUCESSO:${resultadoLogin.getFirebaseUid()}:${resultadoLogin.getProfileType()}"
+            } else {
+                "FALHA:Login rejeitado pelo servidor. Mensagem: ${resultadoLogin.getMensagem()}"
+            }
+
+
+
             withContext(Dispatchers.Main) {
                 onResult(result)
             }
         } catch (e: Exception) {
-            e.printStackTrace()
+
             withContext(Dispatchers.Main) {
-                onResult("ERRO_CONEXAO:" + e.message)
+                onResult("ERRO_CONEXAO:Falha na rede ou no processamento da resposta: ${e.message}")
             }
         } finally {
-            servidor?.adeus() // Garante que a conexão é fechada
+            servidor?.adeus()
         }
     }
 }

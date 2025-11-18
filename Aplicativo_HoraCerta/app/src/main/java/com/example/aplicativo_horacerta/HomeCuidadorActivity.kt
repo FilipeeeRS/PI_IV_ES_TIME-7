@@ -1,5 +1,6 @@
 package com.example.aplicativo_horacerta
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -37,6 +38,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
 import com.example.aplicativo_horacerta.network.PedidoDeDeletarMedicamento
 import com.example.aplicativo_horacerta.network.Resultado
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.ObjectInputStream
@@ -44,19 +46,59 @@ import java.io.ObjectOutputStream
 import java.net.Socket
 
 
+
+import androidx.compose.material.icons.filled.ExitToApp
+
+
 class HomeCuidadorActivity : ComponentActivity() {
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // 1. LER OS DADOS DA INTENT
+        val userUid = intent.getStringExtra(FazerLoginActivity.KEY_USER_UID)
+        val profileType = intent.getStringExtra(FazerLoginActivity.KEY_PROFILE_TYPE)
+
+        if (userUid == null || profileType == null) {
+            // Caso de falha: Redirecionar para o login
+            Toast.makeText(this, "Erro: Falha na passagem de dados de sessão.", Toast.LENGTH_LONG).show()
+            // Opcional: Redirecionar para FazerLoginActivity ou fechar
+            finish()
+            return
+        }
+
+        // 2. USAR OS DADOS
+        Toast.makeText(this, "Home do $profileType. UID: $userUid", Toast.LENGTH_SHORT).show()
+
         setContent {
             Surface(color = Color.Black) {
                 HomeCuidador(
                     onAccessibilityClick = {
                         val intent = Intent(this, AcessibilidadeActivity::class.java)
                         startActivity(intent)
-                    }
+                    },
+                    // PASSA A FUNÇÃO DE LOGOUT
+                    onLogoutClick = { performLogout() }
                 )
             }
         }
+    }
+
+    // Opcional: Adicionar um botão de Logout que remove os dados
+    fun performLogout() {
+        // Remove a sessão do Firebase
+        FirebaseAuth.getInstance().signOut()
+
+        // Limpa os dados do SharedPreferences
+        val prefs = getSharedPreferences(FazerLoginActivity.PREFS_NAME, Context.MODE_PRIVATE)
+        prefs.edit().clear().apply()
+
+        // Redireciona para a tela de Login
+        val intent = Intent(this, FazerLoginActivity::class.java)
+        // Adiciona flags para limpar o histórico de atividades
+        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        startActivity(intent)
+        finish() // Fecha a Home
     }
 }
 
@@ -98,7 +140,9 @@ val sampleHistorico = listOf(
 @Composable
 fun HomeCuidador(
     initialTabIndex: Int = 0,
-    onAccessibilityClick: () -> Unit = {}
+    onAccessibilityClick: () -> Unit = {},
+    // NOVO PARÂMETRO PARA LOGOUT
+    onLogoutClick: () -> Unit
 ) {
 
     val pagerState = rememberPagerState(initialPage = initialTabIndex) { 2 }
@@ -134,6 +178,7 @@ fun HomeCuidador(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
+                        
                         Icon(
                             painter = painterResource(id = R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo",
@@ -145,8 +190,22 @@ fun HomeCuidador(
                             text = "CUIDADOR",
                             color = Color.White,
                             fontSize = 30.sp,
-                            fontWeight = FontWeight.Bold
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.weight(1f) // Adiciona peso para empurrar o botão para a direita
                         )
+
+
+                        IconButton(
+                            onClick = onLogoutClick,
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ExitToApp,
+                                contentDescription = "Sair e Fazer Login",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
 
@@ -453,13 +512,15 @@ fun HistoricoItem(historico: HistoricoMedicamento) {
 @Composable
 fun PreviewHomeCuidador() {
     Surface(color = Color.White) {
-        HomeCuidador(initialTabIndex = 0)
+        // Passa uma função vazia para o Logout no Preview
+        HomeCuidador(initialTabIndex = 0, onLogoutClick = {})
     }
 }
 @Preview(showSystemUi = true, showBackground = true, name = "Aba Histórico")
 @Composable
 fun PreviewHomeCuidadorHistorico() {
     Surface(color = Color.White) {
-        HomeCuidador(initialTabIndex = 1)
+        // Passa uma função vazia para o Logout no Preview
+        HomeCuidador(initialTabIndex = 1, onLogoutClick = {})
     }
 }
