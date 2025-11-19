@@ -268,7 +268,10 @@ fun HomeCuidador(
 
                 IconButton(
                     onClick = {
-                        // Navega para a tela de "conectar a idoso" todo
+                        val intent = Intent(context, CuidadorConectarIdosoActivity::class.java)
+
+
+                        context.startActivity(intent)
                     },
                     modifier = Modifier.size(56.dp)
                 ) {

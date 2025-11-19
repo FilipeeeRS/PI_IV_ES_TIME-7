@@ -56,6 +56,10 @@
             android:name=".FazerLoginActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".CuidadorConectarIdosoActivity"
+            android:exported="false" />
+
     </application>
 
 </manifest>

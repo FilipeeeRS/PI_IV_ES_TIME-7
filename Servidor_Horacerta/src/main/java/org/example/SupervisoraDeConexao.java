@@ -80,6 +80,18 @@ public class SupervisoraDeConexao extends Thread
                         boolean userFound = user != null;
                         this.usuario.receba(new ResultadoLogin(userFound,"ResultadoLogin", user));
                         break;
+
+                    case "ConectarIdoso":
+                        PedidoDeConexao pedidoConexao = gson.fromJson(json, PedidoDeConexao.class);
+
+                        // Chama a função que criamos acima (que mexe no Mongo)
+                        boolean sucessoConexao = pedidoConexao.realizarVinculo();
+
+                        String msg = sucessoConexao ? "Vinculo realizado com sucesso!" : "Erro ao vincular. Verifique o email.";
+
+                        // Responde para o Android
+                        this.usuario.receba(new ResultadoOperacao(sucessoConexao, msg));
+                        break;
                     default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
