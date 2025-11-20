@@ -102,6 +102,16 @@ public class SupervisoraDeConexao extends Thread
                         // Devolve a resposta (Encontrou? Qual o nome?)
                         this.usuario.receba(new ResultadoBuscaIdoso(achou, nomeEncontrado));
                         break;
+
+                    case "BuscarCuidador":
+                        PedidoBuscarCuidador pedidoC = gson.fromJson(json, PedidoBuscarCuidador.class);
+                        String nomeCuidador = pedidoC.processarBuscaNoBanco();
+
+                        boolean achouC = (nomeCuidador != null);
+                        String nomeFinal = achouC ? nomeCuidador : "Nenhum cuidador vinculado";
+
+                        this.usuario.receba(new ResultadoBuscaCuidador(achouC, nomeFinal));
+                        break;
                     default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
