@@ -92,6 +92,16 @@ public class SupervisoraDeConexao extends Thread
                         // Responde para o Android
                         this.usuario.receba(new ResultadoOperacao(sucessoConexao, msg));
                         break;
+
+                        case "BuscarIdoso":
+                        PedidoBuscarIdoso pedidoBusca = gson.fromJson(json, PedidoBuscarIdoso.class);
+                        String nomeEncontrado = pedidoBusca.procurarNomeNoBanco();
+
+                        boolean achou = (nomeEncontrado != null);
+
+                        // Devolve a resposta (Encontrou? Qual o nome?)
+                        this.usuario.receba(new ResultadoBuscaIdoso(achou, nomeEncontrado));
+                        break;
                     default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
