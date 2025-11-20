@@ -56,6 +56,15 @@
             android:name=".FazerLoginActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".CuidadorConectarIdosoActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".HomeIdosoActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Aplicativo_HoraCerta" />
+
     </application>
 
 </manifest>

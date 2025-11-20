@@ -80,6 +80,38 @@ public class SupervisoraDeConexao extends Thread
                         boolean userFound = user != null;
                         this.usuario.receba(new ResultadoLogin(userFound,"ResultadoLogin", user));
                         break;
+
+                    case "ConectarIdoso":
+                        PedidoDeConexao pedidoConexao = gson.fromJson(json, PedidoDeConexao.class);
+
+                        // Chama a função que criamos acima (que mexe no Mongo)
+                        boolean sucessoConexao = pedidoConexao.realizarVinculo();
+
+                        String msg = sucessoConexao ? "Vinculo realizado com sucesso!" : "Erro ao vincular. Verifique o email.";
+
+                        // Responde para o Android
+                        this.usuario.receba(new ResultadoOperacao(sucessoConexao, msg));
+                        break;
+
+                        case "BuscarIdoso":
+                        PedidoBuscarIdoso pedidoBusca = gson.fromJson(json, PedidoBuscarIdoso.class);
+                        String nomeEncontrado = pedidoBusca.procurarNomeNoBanco();
+
+                        boolean achou = (nomeEncontrado != null);
+
+                        // Devolve a resposta (Encontrou? Qual o nome?)
+                        this.usuario.receba(new ResultadoBuscaIdoso(achou, nomeEncontrado));
+                        break;
+
+                    case "BuscarCuidador":
+                        PedidoBuscarCuidador pedidoC = gson.fromJson(json, PedidoBuscarCuidador.class);
+                        String nomeCuidador = pedidoC.processarBuscaNoBanco();
+
+                        boolean achouC = (nomeCuidador != null);
+                        String nomeFinal = achouC ? nomeCuidador : "Nenhum cuidador vinculado";
+
+                        this.usuario.receba(new ResultadoBuscaCuidador(achouC, nomeFinal));
+                        break;
                     default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;

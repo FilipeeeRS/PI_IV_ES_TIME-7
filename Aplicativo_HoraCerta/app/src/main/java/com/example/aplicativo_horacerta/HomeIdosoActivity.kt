@@ -24,6 +24,16 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
+import com.example.aplicativo_horacerta.network.* import com.google.firebase.auth.FirebaseAuth
+import com.google.gson.Gson
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.Socket
 
 class HomeIdosoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -32,6 +42,7 @@ class HomeIdosoActivity : ComponentActivity() {
             Surface(color = Color.Black) {
                 HomeIdosoScreen(
                     onLogoutClick = {
+                        FirebaseAuth.getInstance().signOut()
                         val intent = Intent(this, InicioTelaActivity::class.java)
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         startActivity(intent)
@@ -39,6 +50,41 @@ class HomeIdosoActivity : ComponentActivity() {
                     }
                 )
             }
+        }
+    }
+}
+
+// --- FUNÇÃO DE REDE ---
+suspend fun buscarNomeCuidador(onResult: (String) -> Unit) {
+    val SERVER_IP = "10.0.2.2"
+    val SERVER_PORT = 3000
+    val gson = Gson()
+    val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return
+
+    withContext(Dispatchers.IO) {
+        var servidor: Parceiro? = null
+        try {
+            val conexao = Socket(SERVER_IP, SERVER_PORT)
+            servidor = Parceiro(conexao,
+                BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8)),
+                BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
+            )
+
+            // Envia pedido
+            servidor.receba(PedidoBuscarCuidador(emailIdoso))
+
+            // Recebe resposta (JSON Bruto)
+            val jsonString = servidor.envieJson()
+            val resultado = gson.fromJson(jsonString, ResultadoBuscaCuidador::class.java)
+
+            withContext(Dispatchers.Main) {
+                onResult(resultado.getNomeCuidador())
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            withContext(Dispatchers.Main) { onResult("Erro conexão") }
+        } finally {
+            servidor?.adeus()
         }
     }
 }
@@ -65,25 +111,30 @@ fun HomeIdosoScreen(
     val headerHeight = 130.dp
     val context = LocalContext.current
 
+    // VARIAVEL QUE GUARDA O NOME DO CUIDADOR
+    var nomeCuidador by remember { mutableStateOf("Buscando...") }
+
+    // CHAMA O SERVIDOR ASSIM QUE ABRE A TELA
+    LaunchedEffect(Unit) {
+        buscarNomeCuidador { nome ->
+            nomeCuidador = nome
+        }
+    }
+
     Scaffold(
         topBar = {
             Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(headerHeight)
+                modifier = Modifier.fillMaxWidth().height(headerHeight)
             ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_background),
-                    contentDescription = "Fundo do Cabeçalho",
+                    contentDescription = "Fundo",
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
 
-                // Conteúdo do Cabeçalho (Logo + Título)
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
@@ -93,21 +144,28 @@ fun HomeIdosoScreen(
                         modifier = Modifier.size(100.dp)
                     )
                     Spacer(modifier = Modifier.width(16.dp))
-                    Text(
-                        text = "IDOSO",
-                        color = Color.White,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+
+                    Column {
+                        Text(
+                            text = "IDOSO",
+                            color = Color.White,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        // MOSTRA O NOME AQUI
+                        Text(
+                            text = "Cuidador: $nomeCuidador",
+                            color = Color.White,
+                            fontSize = 16.sp
+                        )
+                    }
+
                     Spacer(modifier = Modifier.weight(1f))
 
-                    // Botão de Deslogar
-                    IconButton(
-                        onClick = onLogoutClick
-                    ) {
+                    IconButton(onClick = onLogoutClick) {
                         Icon(
                             imageVector = Icons.Filled.ExitToApp,
-                            contentDescription = "Sair / Deslogar",
+                            contentDescription = "Sair",
                             tint = Color.White,
                             modifier = Modifier.size(35.dp)
                         )
@@ -116,14 +174,12 @@ fun HomeIdosoScreen(
             }
         },
         floatingActionButton = {
+            // ... (O resto do seu código continua igual) ...
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.Bottom
             ) {
-                // Botão Acessibilidade
                 IconButton(
                     onClick = {
                         val intent = Intent(context, AcessibilidadeActivity::class.java)
@@ -144,7 +200,6 @@ fun HomeIdosoScreen(
         floatingActionButtonPosition = FabPosition.Center
 
     ) { paddingValues ->
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -153,66 +208,26 @@ fun HomeIdosoScreen(
                 .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 100.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-
             Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .height(400.dp),
+                modifier = Modifier.fillMaxWidth(0.9f).height(400.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = CardDefaults.cardColors(containerColor = cardColor),
                 elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
             ) {
                 Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
+                    modifier = Modifier.fillMaxSize().padding(24.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.SpaceAround
                 ) {
-                    Text(
-                        text = "PRÓXIMO REMÉDIO",
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
+                    Text("PRÓXIMO REMÉDIO", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
+                    HorizontalDivider(modifier = Modifier.fillMaxWidth().height(10.dp).background(Color.Gray.copy(alpha = 0.3f)))
 
-                    HorizontalDivider(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(10.dp)
-                            .background(Color.Gray.copy(alpha = 0.3f))
-                    )
-
-                    Text(
-                        text = medicamento.nome,
-                        fontSize = 55.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = medicamento.dia,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
-                    Text(
-                        text = medicamento.horario,
-                        fontSize = 30.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
+                    // DADOS AINDA FAKE DO REMÉDIO
+                    Text(medicamento.nome, fontSize = 55.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
+                    Text(medicamento.dia, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
+                    Text(medicamento.horario, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
                 }
             }
         }
     }
-}
-
-@Preview(showSystemUi = true, showBackground = true, name = "Home Idoso")
-@Composable
-fun PreviewHomeIdosoScreen() {
-    HomeIdosoScreen()
 }
