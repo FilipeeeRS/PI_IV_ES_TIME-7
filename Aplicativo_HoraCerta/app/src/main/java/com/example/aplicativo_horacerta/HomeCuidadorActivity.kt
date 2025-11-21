@@ -3,6 +3,7 @@ package com.example.aplicativo_horacerta
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -45,6 +46,7 @@ import kotlinx.coroutines.withContext
 import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.net.Socket
+import com.google.gson.Gson
 
 
 
@@ -60,6 +62,14 @@ import java.io.OutputStreamWriter
 
 import com.example.aplicativo_horacerta.FazerLoginActivity
 import com.example.aplicativo_horacerta.FazerLoginActivity.Companion.KEY_USER_UID
+import com.example.aplicativo_horacerta.network.Comunicado
+import com.example.aplicativo_horacerta.network.ComunicadoJson
+import com.example.aplicativo_horacerta.network.PedidoDeListarMedicamentos
+import com.google.gson.annotations.SerializedName
+
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 class HomeCuidadorActivity : ComponentActivity() {
 
@@ -117,21 +127,95 @@ class HomeCuidadorActivity : ComponentActivity() {
 
 
 data class Medicamento(
-    val id: Int,
+    // CORREÇÃO 1: Mudar de Int para String
+    val id: String,
+
     val nome: String,
+
     val tomou: Boolean,
-    val data: String,
-    val horario: String
+
+
+    @SerializedName("dia") val data: String,
+
+    val horario: String,
+
+    val descricao: String,
+    val idUsuario: String
 )
 
-//listOf = exemplo para o preview
-val sampleMedicamentos = listOf(
-    Medicamento(1, "Buscopan", true, "02/04 Quarta-Feira", "18:30"),
-    Medicamento(2, "Buscopan",true, "02/04 Quarta-Feira", "18:30"),
-    Medicamento(3, "Salonpas",false, "02/04 Quarta-Feira", "18:30"),
-    Medicamento(4, "Salonpas",false, "02/04 Quarta-Feira", "18:30"),
-    Medicamento(5, "Salonpas", true, "02/04 Quarta-Feira", "18:30"),
+
+data class ResultadoListaMedicamentos(
+    @SerializedName("tipo") val tipo: String = "ResultadoListaMedicamentos",
+    @SerializedName("medicamentos") val medicamentos: List<Medicamento>? // <- Chave "medicamentos"
+) : Comunicado()
+
+
+data class WrapperResposta(
+    @SerializedName("operacao") val operacaoJsonString: String
 )
+
+suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamentos? {
+
+    val SERVER_IP = "10.0.2.2"
+    val SERVER_PORT = 3000
+    val CODIFICACAO = Charsets.UTF_8 // Use UTF-8, mas mude para Charsets.ISO_8859_1 se o problema de acentos voltar.
+
+    val pedido = PedidoDeListarMedicamentos(userId)
+    val gson = Gson()
+
+    return withContext(Dispatchers.IO) {
+        var conexao: Socket? = null
+        try {
+
+            conexao = Socket(SERVER_IP, SERVER_PORT) // 2. Inicializa a conexão
+
+
+            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
+            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
+
+            val servidor = Parceiro(conexao, receptor, transmissor) // 4. Inicializa o Parceiro
+
+            servidor.receba(pedido) // Envia o pedido
+
+
+            val respostaComunicado: Any? = servidor.envie()
+
+
+            conexao.close()
+            conexao = null
+
+            if (respostaComunicado is ComunicadoJson) {
+
+
+                val wrapperJson = respostaComunicado.json
+
+
+                val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
+
+                val jsonStringAninhada = wrapper.operacaoJsonString
+
+                val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoListaMedicamentos::class.java)
+
+                Log.d("Network", "JSON Interno Final: $jsonStringAninhada")
+                return@withContext resultadoFinal
+
+            } else {
+                Log.e("Network", "Resposta inesperada: Não é um ComunicadoJson.")
+                null
+            }
+
+        } catch (e: Exception) {
+            Log.e("Network", "Erro fatal ao listar medicamentos (chegou ao parsing):", e)
+            e.printStackTrace()
+            null
+        } finally {
+            // Garante que a conexão seja fechada em caso de erro
+            conexao?.close()
+        }
+    }
+}
+
+
 
 data class HistoricoMedicamento(
     val id: Int,
@@ -141,14 +225,8 @@ data class HistoricoMedicamento(
     val horario: String
 )
 
-//listOf = exemplo para o preview
-val sampleHistorico = listOf(
-    HistoricoMedicamento(1, "Buscopan", true, "25/01 Sexta-Feir", "18:30"),
-    HistoricoMedicamento(2, "Buscopan", false, "25/01 Sexta-Feira", "18:30"),
-    HistoricoMedicamento(3, "Salonpas", false, "25/01 Sexta-Feira", "18:30"),
-    HistoricoMedicamento(4, "Salonpas", true, "25/01 Sexta-Feira", "18:30"),
-    HistoricoMedicamento(5, "Salonpas", true, "25/01 Sexta-Feira", "18:30")
-)
+
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -156,13 +234,15 @@ fun HomeCuidador(
     userId: String?,
     initialTabIndex: Int = 0,
     onAccessibilityClick: () -> Unit = {},
-    // NOVO PARÂMETRO PARA LOGOUT
     onLogoutClick: () -> Unit
 ) {
 
     val pagerState = rememberPagerState(initialPage = initialTabIndex) { 2 }
     var selectedTabIndex by remember { mutableIntStateOf(initialTabIndex) }
     val scope = rememberCoroutineScope()
+
+
+
     val tabBarColor = Color(0xFFEEEEEE)
     val contentColor = Color.White
 
@@ -171,7 +251,39 @@ fun HomeCuidador(
     }
 
     val context = LocalContext.current
-    val medicamentosList = remember { mutableStateListOf(*sampleMedicamentos.toTypedArray()) }
+    val medicamentosList = remember { mutableStateListOf<Medicamento>() }
+    val historicoList = remember { mutableStateListOf<HistoricoMedicamento>() }
+    var carregamentoFalhou by remember { mutableStateOf(false) }
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            // Se a tela retornar do estado Paused (ou seja, você voltou do RemédioCriarActivity)
+            if (event == Lifecycle.Event.ON_RESUME) {
+                if (userId != null) {
+                    // Executa a busca de dados no servidor
+                    scope.launch {
+                        val resultado = performListarMedicamentos(userId)
+                        if (resultado?.medicamentos != null) {
+                            medicamentosList.clear()
+                            medicamentosList.addAll(resultado.medicamentos)
+                            // A lista mutável faz o Compose redesenhar automaticamente
+                        } else {
+                            // Opcional: Mostrar Toast de falha de recarga
+                        }
+                    }
+                }
+            }
+        }
+
+        // Adiciona o observador ao ciclo de vida
+        lifecycleOwner.lifecycle.addObserver(observer)
+
+        // Limpeza (chamado quando o Composable é removido)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -326,7 +438,7 @@ fun HomeCuidador(
                         }
                     }
                 )
-                1 -> HistoricoTab()
+                1 -> HistoricoTab(historicoList =  historicoList)
             }
         }
     }
@@ -414,15 +526,21 @@ fun MedicamentosTab(
                     medicamento = medicamento,
                     onDeleteClick = {
                         medicamentoParaDeletar = medicamento
-                        showDeleteDialog = true },
+                        showDeleteDialog = true
+                    }
+                    // REMOVA O BLOCO onEditClick COMPLETO:
+                    /*
                     onEditClick = {
                         val intent = Intent(context, RemédioEditarActivity::class.java)
                         intent.putExtra("MEDICAMENTO_ID", medicamento.id.toString())
                         context.startActivity(intent)
                     }
+                    */
                 )
             }
         }
+
+
     }
 
     if (showDeleteDialog && medicamentoParaDeletar != null) {
@@ -479,8 +597,7 @@ fun DeleteConfirmationDialog(
 @Composable
 fun MedicamentoItem(
     medicamento: Medicamento,
-    onDeleteClick: () -> Unit,
-    onEditClick: () -> Unit
+    onDeleteClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -502,23 +619,32 @@ fun MedicamentoItem(
                 Text(text = "Horário: ${medicamento.horario}", fontSize = 14.sp, color = Color.Gray)
             }
             IconButton(onClick = onDeleteClick) {Icon(Icons.Filled.Delete, contentDescription = "Deletar", tint = Color.Gray,modifier = Modifier.size(28.dp)) }
-            IconButton(onClick = onEditClick) { Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.size(28.dp)) }
+            //IconButton(onClick = onEditClick) { Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.size(28.dp)) }
         }
     }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 
+// Mude a função para aceitar a lista
 @Composable
-fun HistoricoTab() {
-    // se a lista estiver vazia, não mostra nada
+fun HistoricoTab(historicoList: List<HistoricoMedicamento>) {
+
+    // Se a lista estiver vazia, você pode mostrar uma mensagem
+    if (historicoList.isEmpty()) {
+        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            Text("Nenhum histórico encontrado.", color = Color.Gray)
+        }
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        items(sampleHistorico) { historicoItem ->
+        // Itera sobre a lista passada
+        items(historicoList) { historicoItem ->
             HistoricoItem(historico = historicoItem)
         }
     }

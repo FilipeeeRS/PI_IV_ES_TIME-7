@@ -6,6 +6,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
+import org.bson.Document;
 
 
 public class SupervisoraDeConexao extends Thread
@@ -117,6 +118,21 @@ public class SupervisoraDeConexao extends Thread
                         PedidoDeCriarMedicamento pedidoMedicamento = gson.fromJson(json, PedidoDeCriarMedicamento.class);
                         resultado = pedidoMedicamento.executar();
                         this.usuario.receba(new ResultadoOperacao(resultado, "PedidoDeCriarMedicamento"));
+                        break;
+                    case "PedidoDeListarMedicamentos":
+                        PedidoDeListarMedicamentos pedidoListarMedicamento = gson.fromJson(json, PedidoDeListarMedicamentos.class);
+
+                        // 1. Executa a busca no MongoDB, obtendo a lista de documentos
+                        List<Document> listaDocumentos = pedidoListarMedicamento.executar();
+
+                        // 2. Converte a List<Document> para List<Medicamento>
+                        List<Medicamento> listaMedicamentosPOJO = new ArrayList<>();
+                        for (Document doc : listaDocumentos) {
+                            listaMedicamentosPOJO.add(Medicamento.fromDocument(doc));
+                        }
+
+                        // 3. Cria e envia o objeto que contém a lista
+                        this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO)); // Use 'recebe'
                         break;
 
                     default:

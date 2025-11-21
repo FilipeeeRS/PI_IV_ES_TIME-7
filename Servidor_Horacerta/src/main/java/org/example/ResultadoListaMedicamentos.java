@@ -1,16 +1,21 @@
 package org.example;
 
-import java.util.ArrayList;
+import java.util.List;
 
-public class ResultadoListaMedicamentos extends Comunicado {
-    private ArrayList<Medicamento> lista;
 
-    public ResultadoListaMedicamentos(ArrayList<Medicamento> lista) {
-        this.lista = lista;
+public class ResultadoListaMedicamentos extends ComunicadoJson {
+
+
+    private List<Medicamento> medicamentos;
+
+
+    public ResultadoListaMedicamentos(List<Medicamento> medicamentos) {
+        super("ResultadoListaMedicamentos");
+        this.medicamentos = medicamentos;
     }
 
-    // Getter para o Android pegar a lista
-    public ArrayList<Medicamento> getLista() {
-        return lista;
+    // Opcional, mas útil para o Servidor
+    public List<Medicamento> getMedicamentos() {
+        return medicamentos;
     }
 }

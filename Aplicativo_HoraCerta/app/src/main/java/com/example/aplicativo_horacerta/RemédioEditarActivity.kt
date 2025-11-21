@@ -25,13 +25,13 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
-
+/*
 class RemédioEditarActivity : ComponentActivity() {
     private var medicamentoId: String? = null
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         medicamentoId = intent.getStringExtra("MEDICAMENTO_ID") // Pega o ID que a Home enviou
-        val dadosDoRemedio = sampleMedicamentos.find { it.id.toString() == medicamentoId }
+        //val dadosDoRemedio = sampleMedicamentos.find { it.id.toString() == medicamentoId }
         setContent {
             Surface(color = Color.Black) {
                 RemédioEditarScreen(
@@ -268,3 +268,5 @@ fun PreviewRemédioEditarScreen() {
         RemédioEditarScreen(dadosIniciais = previewData, onBackClick = {}, onSaveClick = {_,_,_,_ ->})
     }
 }
+
+ */
