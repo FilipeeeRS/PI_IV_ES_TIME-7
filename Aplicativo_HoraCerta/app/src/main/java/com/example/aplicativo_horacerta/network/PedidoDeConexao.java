@@ -15,4 +15,6 @@ public class PedidoDeConexao extends ComunicadoJson {
         this.emailCuidador = emailCuidador;
         this.emailIdoso = emailIdoso;
     }
+
+
 }

@@ -25,10 +25,25 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
-
+import com.example.aplicativo_horacerta.network.Parceiro
+import com.example.aplicativo_horacerta.network.PedidoDeCriarMedicamento
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
+import java.net.Socket
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
+import android.widget.Toast
 class RemédioCriarActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // TODO: Obter o ID do usuário logado (pode vir de SharedPreferences, Bundle, ou um ViewModel)
+        val idUsuarioLogado = intent.getStringExtra(FazerLoginActivity.KEY_USER_UID)// Mude isso para o ID real
+
         setContent {
             Surface(color = Color.Black) {
                 RemédioCriarScreen(
@@ -36,10 +51,62 @@ class RemédioCriarActivity : ComponentActivity() {
                         finish()
                     },
                     onSaveClick = { nome, dia, horario, descricao ->
-                        // TODO: Lógica para salvar o novo medicamento no Firebase
-                        finish()
+                        // Lógica para salvar o novo medicamento
+                        lifecycleScope.launch {
+                            performCriarMedicamento(nome, dia, horario, descricao, idUsuarioLogado, { resultado ->
+                                    // Aqui você trata o resultado retornado pelo servidor
+                                    println("Resultado do Cadastro: $resultado")
+                                    // Exibir uma mensagem (Toast) para o usuário seria ideal
+                                    Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
+                                    // Fecha a tela após a tentativa de cadastro
+                                }
+                            )
+                        }
                     }
                 )
+            }
+        }
+    }
+}
+suspend fun performCriarMedicamento(
+    nome: String,
+    dia: String,
+    horario: String,
+    descricao: String,
+    idUsuario: String?,
+    onResult: (String) -> Unit
+) {
+    val SERVER_IP = "10.0.2.2"
+    val SERVER_PORT = 3000
+
+
+    val pedido = PedidoDeCriarMedicamento(nome, dia, horario, descricao, idUsuario)
+
+    withContext(Dispatchers.IO) {
+        try {
+            val conexao = Socket(SERVER_IP, SERVER_PORT)
+            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream()))
+            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream()))
+            val servidor = Parceiro(conexao, receptor, transmissor)
+
+            // 1. Envia o pedido ao servidor
+            servidor.receba(pedido)
+
+            // 2. Aguarda e recebe a resposta do servidor
+            val resposta: Any? = servidor.envie()
+
+            // Transfere o resultado para a Main Thread para atualização da UI
+            withContext(Dispatchers.Main) {
+                onResult(resposta?.toString() ?: "Resposta vazia do servidor")
+            }
+
+            conexao.close()
+
+        } catch (e: Exception) {
+            e.printStackTrace()
+            // Transfere o erro para a Main Thread
+            withContext(Dispatchers.Main) {
+                onResult("Erro de comunicação: ${e.message}")
             }
         }
     }

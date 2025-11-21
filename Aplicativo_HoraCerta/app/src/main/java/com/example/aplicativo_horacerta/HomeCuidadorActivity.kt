@@ -50,7 +50,16 @@ import java.net.Socket
 
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.core.content.ContextCompat.startActivity
+import com.example.aplicativo_horacerta.network.Parceiro
+import com.example.aplicativo_horacerta.network.PedidoDeCriarMedicamento
+import java.io.BufferedReader
+import java.io.BufferedWriter
+import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 
+import com.example.aplicativo_horacerta.FazerLoginActivity
+import com.example.aplicativo_horacerta.FazerLoginActivity.Companion.KEY_USER_UID
 
 class HomeCuidadorActivity : ComponentActivity() {
 
@@ -75,6 +84,7 @@ class HomeCuidadorActivity : ComponentActivity() {
         setContent {
             Surface(color = Color.Black) {
                 HomeCuidador(
+                    userId = userUid,
                     onAccessibilityClick = {
                         val intent = Intent(this, AcessibilidadeActivity::class.java)
                         startActivity(intent)
@@ -103,6 +113,8 @@ class HomeCuidadorActivity : ComponentActivity() {
         finish() // Fecha a Home
     }
 }
+
+
 
 data class Medicamento(
     val id: Int,
@@ -141,6 +153,7 @@ val sampleHistorico = listOf(
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeCuidador(
+    userId: String?,
     initialTabIndex: Int = 0,
     onAccessibilityClick: () -> Unit = {},
     // NOVO PARÂMETRO PARA LOGOUT
@@ -296,6 +309,7 @@ fun HomeCuidador(
         ) { page ->
             when (page) {
                 0 -> MedicamentosTab(
+                    userId = userId ?: "",
                     medicamentosList = medicamentosList,
                     onRemoveMedicamento = { medicamento ->
                         scope.launch {
@@ -354,6 +368,7 @@ suspend fun performDeleteMedicamento(idMedicamento: String): Resultado? {
 ////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun MedicamentosTab(
+    userId: String,
     medicamentosList: List<Medicamento>,
     onRemoveMedicamento: (Medicamento) -> Unit
 ) {
@@ -368,7 +383,15 @@ fun MedicamentosTab(
     ) {
         TextButton(
             onClick = {
+
+                // 2. Crie a Intent: Use a classe correta
                 val intent = Intent(context, RemédioCriarActivity::class.java)
+
+                // 3. PASSE O USER ID (Corrigindo o erro de IDE inválido)
+                // Corrigindo o erro "Unresolved reference KEY_USER_ID" e o erro de runtime "ide inválido"
+                intent.putExtra(KEY_USER_UID, userId)
+
+                // 4. Inicie a Activity
                 context.startActivity(intent)
             },
             modifier = Modifier.padding(vertical = 8.dp)
@@ -535,7 +558,7 @@ fun HistoricoItem(historico: HistoricoMedicamento) {
         }
     }
 }
-
+/*
 @Preview(showSystemUi = true, showBackground = true, name = "Aba Medicamentos")
 @Composable
 fun PreviewHomeCuidador() {
@@ -552,3 +575,5 @@ fun PreviewHomeCuidadorHistorico() {
         HomeCuidador(initialTabIndex = 1, onLogoutClick = {})
     }
 }
+
+ */

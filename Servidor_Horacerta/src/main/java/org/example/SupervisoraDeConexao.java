@@ -112,6 +112,13 @@ public class SupervisoraDeConexao extends Thread
 
                         this.usuario.receba(new ResultadoBuscaCuidador(achouC, nomeFinal));
                         break;
+
+                    case "PedidoDeCriarMedicamento":
+                        PedidoDeCriarMedicamento pedidoMedicamento = gson.fromJson(json, PedidoDeCriarMedicamento.class);
+                        resultado = pedidoMedicamento.executar();
+                        this.usuario.receba(new ResultadoOperacao(resultado, "PedidoDeCriarMedicamento"));
+                        break;
+
                     default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
