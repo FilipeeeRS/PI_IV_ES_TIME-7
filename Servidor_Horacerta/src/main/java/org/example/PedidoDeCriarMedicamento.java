@@ -9,8 +9,6 @@ import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
 
 
-
-
 public class PedidoDeCriarMedicamento extends ComunicadoJson {
     @SerializedName("nome")
     private String nome;
