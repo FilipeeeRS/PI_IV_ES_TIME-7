@@ -305,7 +305,7 @@ fun HomeCuidador(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        
+
                         Icon(
                             painter = painterResource(id = R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo",
@@ -426,7 +426,8 @@ fun HomeCuidador(
                     onRemoveMedicamento = { medicamento ->
                         scope.launch {
                             //  Deletar do servidor
-                            val resultado = performDeleteMedicamento(medicamento.id.toString())
+                            // CORREÇÃO: Passar o userId para a função de deleção
+                            val resultado = performDeleteMedicamento(medicamento.id, userId ?: "")
 
                             if (resultado?.isSucesso == true) {
                                 // Se deletou, remove da lista
@@ -445,12 +446,14 @@ fun HomeCuidador(
 }
 
 // Função de rede para deletar medicamento
-suspend fun performDeleteMedicamento(idMedicamento: String): Resultado? {
+// CORREÇÃO 1: Adicionar o parâmetro idUsuario
+suspend fun performDeleteMedicamento(idMedicamento: String, idUsuario: String): Resultado? {
 
     val SERVER_IP = "192.168.0.10"
     val SERVER_PORT = 12345
 
-    val pedido = PedidoDeDeletarMedicamento(idMedicamento)
+    // CORREÇÃO 2: Passar idUsuario para o PedidoDeDeletarMedicamento
+    val pedido = PedidoDeDeletarMedicamento(idMedicamento, idUsuario)
 
     // Roda a rede em background
     return withContext(Dispatchers.IO) {
@@ -528,11 +531,11 @@ fun MedicamentosTab(
                         medicamentoParaDeletar = medicamento
                         showDeleteDialog = true
                     }
-                    // REMOVA O BLOCO onEditClick COMPLETO:
+                    // O bloco onEditClick foi removido aqui. Se quiser adicionar, use:
                     /*
                     onEditClick = {
                         val intent = Intent(context, RemédioEditarActivity::class.java)
-                        intent.putExtra("MEDICAMENTO_ID", medicamento.id.toString())
+                        intent.putExtra("MEDICAMENTO_ID", medicamento.id)
                         context.startActivity(intent)
                     }
                     */

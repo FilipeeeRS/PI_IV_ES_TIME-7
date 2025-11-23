@@ -1,10 +1,13 @@
 package com.example.aplicativo_horacerta.network
 
-// Classe espelho de PedidoDeDeletarMedicamento.java
+import com.google.gson.annotations.SerializedName
+
 data class PedidoDeDeletarMedicamento(
-    val idMedicamento: String
-) : Comunicado() {
-    companion object {
-        private const val serialVersionUID = 1L
-    }
-}
+    // O campo no JSON deve ser "id"
+    @SerializedName("id")
+    val idMedicamento: String,
+
+    // O campo no JSON deve ser "idUsuario"
+    @SerializedName("idUsuario")
+    val idUsuario: String
+)
