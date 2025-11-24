@@ -9,64 +9,59 @@ import com.google.gson.JsonObject;
 import org.bson.Document;
 
 
-public class SupervisoraDeConexao extends Thread
-{
-    private Parceiro            usuario;
-    private Socket              conexao;
+
+public class SupervisoraDeConexao extends Thread {
+    private Parceiro usuario;
+    private Socket conexao;
     private ArrayList<Parceiro> usuarios;
     private Gson gson;
 
+    public SupervisoraDeConexao(Socket conexao, ArrayList<Parceiro> usuarios)
+            throws Exception {
+        if (conexao == null)
+            throw new Exception("Conexao ausente");
 
-    public SupervisoraDeConexao
-            (Socket conexao, ArrayList<Parceiro> usuarios)
-            throws Exception
-    {
-        if (conexao==null)
-            throw new Exception ("Conexao ausente");
+        if (usuarios == null)
+            throw new Exception("Usuarios ausentes");
 
-        if (usuarios==null)
-            throw new Exception ("Usuarios ausentes");
-
-        this.conexao  = conexao;
+        this.conexao = conexao;
         this.usuarios = usuarios;
-        this.gson     = new Gson();
+        this.gson = new Gson();
     }
 
-    public void run ()
-    {
-        try{
+    public void run() {
+        try {
             BufferedWriter transmissor = new BufferedWriter(
                     new OutputStreamWriter(this.conexao.getOutputStream(), StandardCharsets.UTF_8));
             BufferedReader receptor = new BufferedReader(
                     new InputStreamReader(this.conexao.getInputStream(), StandardCharsets.UTF_8));
 
-            this.usuario =
-                    new Parceiro (this.conexao,
-                            receptor,
-                            transmissor);
+            this.usuario = new Parceiro(this.conexao, receptor, transmissor);
 
-            synchronized (this.usuarios)
-            {
-                this.usuarios.add (this.usuario);
+            synchronized (this.usuarios) {
+                this.usuarios.add(this.usuario);
             }
 
-            for(;;){
-                ComunicadoJson comunicadoJson = (ComunicadoJson) this.usuario.envie ();
+            for (;;) {
+                // Tenta ler o comunicado JSON bruto
+                ComunicadoJson comunicadoJson = (ComunicadoJson) this.usuario.envie();
 
-                if (comunicadoJson==null)
+                if (comunicadoJson == null)
                     return;
 
+                // 1. Extrai o tipo de operação
                 String json = comunicadoJson.getJson();
                 JsonObject obj = gson.fromJson(json, JsonObject.class);
                 String tipo = obj.get("operacao").getAsString();
                 boolean resultado;
 
+                // 2. Processa a operação com o Switch
                 switch (tipo) {
                     case "PedidoParaSair":
                         synchronized (this.usuarios) {
                             resultado = this.usuarios.remove(this.usuario);
                         }
-                        this.usuario.receba(new ResultadoOperacao(resultado,"LogOut"));
+                        this.usuario.receba(new ResultadoOperacao(resultado, "LogOut"));
                         this.usuario.adeus();
                         return;
 
@@ -80,7 +75,7 @@ public class SupervisoraDeConexao extends Thread
                         PedidoDeLogin login = gson.fromJson(json, PedidoDeLogin.class);
                         Usuario user = login.getUserData();
                         boolean userFound = user != null;
-                        this.usuario.receba(new ResultadoLogin(userFound,"ResultadoLogin", user));
+                        this.usuario.receba(new ResultadoLogin(userFound, "ResultadoLogin", user));
                         break;
 
                     case "ConectarIdoso":
@@ -117,17 +112,16 @@ public class SupervisoraDeConexao extends Thread
                         // Executa a busca
                         List<Document> listaDocumentos = pedidoListarMedicamento.executar();
 
-                        // Converte
+                        // Converte Document para POJO (Medicamento)
                         List<Medicamento> listaMedicamentosPOJO = new ArrayList<>();
                         for (Document doc : listaDocumentos) {
+                            // Presume-se que Medicamento.fromDocument(doc) está implementado
                             listaMedicamentosPOJO.add(Medicamento.fromDocument(doc));
                         }
 
-                        // Envia a resposta e ENCERRA este case com break
+                        // Envia a resposta de LISTA e ENCERRA este case
                         this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO));
-                        break;
-
-
+                        break; // <--- O break garante que o código não continue
 
                     case "PedidoDeEditarMedicamento":
                         PedidoDeEditarMedicamento pedidoEdit = gson.fromJson(json, PedidoDeEditarMedicamento.class);
@@ -145,21 +139,15 @@ public class SupervisoraDeConexao extends Thread
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
                 }
-
-
-                        this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO)); // Use 'recebe'
-                        break;
-
-                    default:
-                        System.err.println("Comunicado desconhecido: " + tipo);
-                        break;
-                }
-            }
-        }catch(Exception erro){
+            } // Fim do for(;;)
+        } catch (Exception erro) {
             System.err.println("Erro de supervisao: " + erro.getMessage());
-            try { if (usuario != null) usuario.adeus(); } catch (Exception ignored) {}
+            erro.printStackTrace(); // Adicionei para melhor debug
+            try {
+                if (usuario != null)
+                    usuario.adeus();
+            } catch (Exception ignored) {
+            }
         }
-
     }
-
 }

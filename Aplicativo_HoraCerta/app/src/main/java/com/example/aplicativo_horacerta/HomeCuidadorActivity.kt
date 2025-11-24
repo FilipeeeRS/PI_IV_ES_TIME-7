@@ -38,7 +38,6 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
-import com.example.aplicativo_horacerta.network.PedidoDeDeletarMedicamento
 import com.example.aplicativo_horacerta.network.Resultado
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.Dispatchers
@@ -70,6 +69,8 @@ import com.google.gson.annotations.SerializedName
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.aplicativo_horacerta.network.PedidoDeDeletarMedicamento
+import java.io.Serializable
 
 class HomeCuidadorActivity : ComponentActivity() {
 
@@ -158,7 +159,7 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
 
     val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8 // Use UTF-8, mas mude para Charsets.ISO_8859_1 se o problema de acentos voltar.
+    val CODIFICACAO = Charsets.UTF_8
 
     val pedido = PedidoDeListarMedicamentos(userId)
     val gson = Gson()
@@ -166,34 +167,27 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
     return withContext(Dispatchers.IO) {
         var conexao: Socket? = null
         try {
-
-            conexao = Socket(SERVER_IP, SERVER_PORT) // 2. Inicializa a conexão
-
+            conexao = Socket(SERVER_IP, SERVER_PORT)
 
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
 
-            val servidor = Parceiro(conexao, receptor, transmissor) // 4. Inicializa o Parceiro
+            val servidor = Parceiro(conexao, receptor, transmissor)
 
-            servidor.receba(pedido) // Envia o pedido
+            // 1. Envia o pedido
+            servidor.receba(pedido)
+            transmissor.flush() // Garante que o pedido foi enviado antes de ler a resposta.
 
-
+            // 2. Aguarda e recebe a resposta
             val respostaComunicado: Any? = servidor.envie()
 
-
-            conexao.close()
-            conexao = null
+            // REMOVIDO: conexao = null (Deixe o objeto ser fechado pelo finally)
 
             if (respostaComunicado is ComunicadoJson) {
-
-
+                // Parsing do ComunicadoJson -> WrapperResposta -> ResultadoListaMedicamentos
                 val wrapperJson = respostaComunicado.json
-
-
                 val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
-
                 val jsonStringAninhada = wrapper.operacaoJsonString
-
                 val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoListaMedicamentos::class.java)
 
                 Log.d("Network", "JSON Interno Final: $jsonStringAninhada")
@@ -201,15 +195,15 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
 
             } else {
                 Log.e("Network", "Resposta inesperada: Não é um ComunicadoJson.")
-                null
+                return@withContext null
             }
 
         } catch (e: Exception) {
-            Log.e("Network", "Erro fatal ao listar medicamentos (chegou ao parsing):", e)
+            Log.e("Network", "Erro fatal ao listar medicamentos:", e)
             e.printStackTrace()
-            null
+            return@withContext null
         } finally {
-            // Garante que a conexão seja fechada em caso de erro
+            // Garante que a conexão seja fechada no final
             conexao?.close()
         }
     }
@@ -423,20 +417,27 @@ fun HomeCuidador(
                 0 -> MedicamentosTab(
                     userId = userId ?: "",
                     medicamentosList = medicamentosList,
+                    // ... dentro de MedicamentosTab
                     onRemoveMedicamento = { medicamento ->
                         scope.launch {
-                            //  Deletar do servidor
-                            val resultado = performDeleteMedicamento(medicamento.id.toString())
+                            // userId deve ser passado para a função de deleção!
+                            val usuarioId = userId ?: return@launch // Garante que o ID não é nulo antes de prosseguir
 
+                            val resultado = performDeleteMedicamento(medicamento.id.toString(), usuarioId)
+
+                            // Se o servidor retornar ResultadoOperacao(isSucesso = true), esta condição passa
                             if (resultado?.isSucesso == true) {
-                                // Se deletou, remove da lista
+                                // **Isto remove o item da UI e resolve o seu problema de sincronização**
                                 medicamentosList.remove(medicamento)
                                 Toast.makeText(context, "Medicamento deletado!", Toast.LENGTH_SHORT).show()
                             } else {
-                                Toast.makeText(context, "Erro: ${resultado?.mensagem}", Toast.LENGTH_LONG).show()
+                                // Usa a mensagem de erro da resposta (ou uma genérica se for nula)
+                                val mensagemErro = resultado?.mensagem ?: "Erro desconhecido ao deletar."
+                                Toast.makeText(context, mensagemErro, Toast.LENGTH_LONG).show()
                             }
                         }
                     }
+// ...
                 )
                 1 -> HistoricoTab(historicoList =  historicoList)
             }
@@ -444,39 +445,96 @@ fun HomeCuidador(
     }
 }
 
-// Função de rede para deletar medicamento
-suspend fun performDeleteMedicamento(idMedicamento: String): Resultado? {
 
-    val SERVER_IP = "192.168.0.10"
-    val SERVER_PORT = 12345
+data class ResultadoOperacao(
+    @SerializedName("tipo")
+    val tipo: String,
 
-    val pedido = PedidoDeDeletarMedicamento(idMedicamento)
+    @SerializedName("sucesso") // OK: Mapeia o campo 'sucesso' do servidor
+    val isSucesso: Boolean,
 
-    // Roda a rede em background
+    @SerializedName("mensagem")
+    val mensagem: String? = null
+) : Comunicado() // OK
+
+
+
+
+
+
+// ARQUIVO: HomeCuidadorActivity.kt (FUNÇÃO performDeleteMedicamento)
+suspend fun performDeleteMedicamento(
+    idMedicamento: String,
+    idUsuario: String? // userId do Cuidador
+): ResultadoOperacao? {
+
+    val SERVER_IP = "10.0.2.2"
+    val SERVER_PORT = 3000
+    val CODIFICACAO = Charsets.UTF_8
+
+    val pedido = PedidoDeDeletarMedicamento(idMedicamento, idUsuario)
+    val gson = Gson()
+
     return withContext(Dispatchers.IO) {
+        var conexao: Socket? = null
         try {
-            val socket = Socket(SERVER_IP, SERVER_PORT)
-            val oos = ObjectOutputStream(socket.outputStream)
+            // 1. Inicializa a conexão
+            conexao = Socket(SERVER_IP, SERVER_PORT)
 
-            oos.writeObject(pedido) // Envia o pedido
-            oos.flush()
+            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
+            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
+            val servidor = Parceiro(conexao, receptor, transmissor)
 
-            val ois = ObjectInputStream(socket.inputStream)
-            val resposta = ois.readObject() as? Resultado
+            // 2. Envia o pedido
+            servidor.receba(pedido)
+            // FORÇA O ENVIO DO PEDIDO ANTES DE TENTAR LER A RESPOSTA
+            transmissor.flush()
 
-            ois.close()
-            oos.close()
-            socket.close()
-            //recebe a resposta
-            resposta
+            // 3. Aguarda e recebe a resposta do servidor (ComunicadoJson)
+            val respostaComunicado: Any? = servidor.envie() // LÊ A RESPOSTA AQUI!
+
+            // ******* REMOVER QUALQUER conexao.close() NESTE BLOCO *******
+            // ******* O FECHAMENTO VAI PARA O FINALLY *******
+
+            if (respostaComunicado == null) {
+                Log.e("DeleteNetwork", "Erro: Resposta do servidor é NULL.")
+                return@withContext ResultadoOperacao(tipo = "ErroCliente", isSucesso = false, mensagem = "Resposta vazia do servidor.")
+            }
+
+            if (respostaComunicado is ComunicadoJson) {
+                val wrapperJson = respostaComunicado.json
+                val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
+                val jsonStringAninhada = wrapper.operacaoJsonString
+
+                // 4. Desserializa o resultado final
+                val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoOperacao::class.java)
+
+                Log.d("DeleteNetwork", "Resultado Final (isSucesso): ${resultadoFinal.isSucesso}")
+                return@withContext resultadoFinal
+
+            } else {
+                Log.e("DeleteNetwork", "Erro: Resposta recebida não é um ComunicadoJson.")
+                return@withContext ResultadoOperacao(tipo = "ErroCliente", isSucesso = false, mensagem = "Formato de resposta inesperado.")
+            }
 
         } catch (e: Exception) {
-            e.printStackTrace()
-            null
+            Log.e("DeleteNetwork", "Erro GERAL de rede ou desserialização:", e)
+            // Não fechar aqui, pois o finally cuidará disso.
+            return@withContext ResultadoOperacao(tipo = "ErroComunicação", isSucesso = false, mensagem = "Erro de comunicação: ${e.message}")
+        } finally {
+            // 5. GARANTE O FECHAMENTO APENAS NO FINAL, DEPOIS QUE O CLIENTE LEU A RESPOSTA
+            conexao?.close()
         }
     }
 }
 
+// Mantenha esta classe auxiliar para lidar com o JSON aninhado, se o servidor a estiver usando:
+/*
+data class WrapperResposta(
+    @SerializedName("operacao") val operacaoJsonString: String
+)
+
+ */
 ////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun MedicamentosTab(
