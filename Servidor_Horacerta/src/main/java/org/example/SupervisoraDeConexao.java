@@ -114,20 +114,20 @@ public class SupervisoraDeConexao extends Thread
                     case "PedidoDeListarMedicamentos":
                         PedidoDeListarMedicamentos pedidoListarMedicamento = gson.fromJson(json, PedidoDeListarMedicamentos.class);
 
-                        // 1. Executa a busca
+                        // Executa a busca
                         List<Document> listaDocumentos = pedidoListarMedicamento.executar();
 
-                        // 2. Converte
+                        // Converte
                         List<Medicamento> listaMedicamentosPOJO = new ArrayList<>();
                         for (Document doc : listaDocumentos) {
                             listaMedicamentosPOJO.add(Medicamento.fromDocument(doc));
                         }
 
-                        // 3. Envia a resposta e ENCERRA este case com break
+                        // Envia a resposta e ENCERRA este case com break
                         this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO));
                         break;
 
-                    // --- AGORA SIM, FORA DO ANTERIOR ---
+
 
                     case "PedidoDeEditarMedicamento":
                         PedidoDeEditarMedicamento pedidoEdit = gson.fromJson(json, PedidoDeEditarMedicamento.class);
@@ -146,7 +146,7 @@ public class SupervisoraDeConexao extends Thread
                         break;
                 }
 
-                        // 3. Cria e envia o objeto que contém a lista
+
                         this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO)); // Use 'recebe'
                         break;
 
