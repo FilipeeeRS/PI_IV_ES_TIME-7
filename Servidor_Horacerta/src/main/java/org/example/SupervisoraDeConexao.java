@@ -63,18 +63,19 @@ public class SupervisoraDeConexao extends Thread
 
                 switch (tipo) {
                     case "PedidoParaSair":
-
                         synchronized (this.usuarios) {
                             resultado = this.usuarios.remove(this.usuario);
                         }
                         this.usuario.receba(new ResultadoOperacao(resultado,"LogOut"));
                         this.usuario.adeus();
                         return;
+
                     case "Cadastro":
                         PedidoDeCadastro cadastro = gson.fromJson(json, PedidoDeCadastro.class);
                         resultado = cadastro.criarDocumento();
                         this.usuario.receba(new ResultadoOperacao(resultado, "ResultadoCadastro"));
                         break;
+
                     case "Login":
                         PedidoDeLogin login = gson.fromJson(json, PedidoDeLogin.class);
                         Usuario user = login.getUserData();
@@ -84,33 +85,23 @@ public class SupervisoraDeConexao extends Thread
 
                     case "ConectarIdoso":
                         PedidoDeConexao pedidoConexao = gson.fromJson(json, PedidoDeConexao.class);
-
-                        // Chama a função que criamos acima (que mexe no Mongo)
                         boolean sucessoConexao = pedidoConexao.realizarVinculo();
-
                         String msg = sucessoConexao ? "Vinculo realizado com sucesso!" : "Erro ao vincular. Verifique o email.";
-
-                        // Responde para o Android
                         this.usuario.receba(new ResultadoOperacao(sucessoConexao, msg));
                         break;
 
-                        case "BuscarIdoso":
+                    case "BuscarIdoso":
                         PedidoBuscarIdoso pedidoBusca = gson.fromJson(json, PedidoBuscarIdoso.class);
                         String nomeEncontrado = pedidoBusca.procurarNomeNoBanco();
-
                         boolean achou = (nomeEncontrado != null);
-
-                        // Devolve a resposta (Encontrou? Qual o nome?)
                         this.usuario.receba(new ResultadoBuscaIdoso(achou, nomeEncontrado));
                         break;
 
                     case "BuscarCuidador":
                         PedidoBuscarCuidador pedidoC = gson.fromJson(json, PedidoBuscarCuidador.class);
                         String nomeCuidador = pedidoC.processarBuscaNoBanco();
-
                         boolean achouC = (nomeCuidador != null);
                         String nomeFinal = achouC ? nomeCuidador : "Nenhum cuidador vinculado";
-
                         this.usuario.receba(new ResultadoBuscaCuidador(achouC, nomeFinal));
                         break;
 
@@ -119,17 +110,41 @@ public class SupervisoraDeConexao extends Thread
                         resultado = pedidoMedicamento.executar();
                         this.usuario.receba(new ResultadoOperacao(resultado, "PedidoDeCriarMedicamento"));
                         break;
+
                     case "PedidoDeListarMedicamentos":
                         PedidoDeListarMedicamentos pedidoListarMedicamento = gson.fromJson(json, PedidoDeListarMedicamentos.class);
 
-                        // 1. Executa a busca no MongoDB, obtendo a lista de documentos
+                        // 1. Executa a busca
                         List<Document> listaDocumentos = pedidoListarMedicamento.executar();
 
-                        // 2. Converte a List<Document> para List<Medicamento>
+                        // 2. Converte
                         List<Medicamento> listaMedicamentosPOJO = new ArrayList<>();
                         for (Document doc : listaDocumentos) {
                             listaMedicamentosPOJO.add(Medicamento.fromDocument(doc));
                         }
+
+                        // 3. Envia a resposta e ENCERRA este case com break
+                        this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO));
+                        break;
+
+                    // --- AGORA SIM, FORA DO ANTERIOR ---
+
+                    case "PedidoDeEditarMedicamento":
+                        PedidoDeEditarMedicamento pedidoEdit = gson.fromJson(json, PedidoDeEditarMedicamento.class);
+                        boolean editou = pedidoEdit.executar();
+                        this.usuario.receba(new ResultadoOperacao(editou, "MedicamentoEditado"));
+                        break;
+
+                    case "PedidoDeDeletarMedicamento":
+                        PedidoDeDeletarMedicamento pedidoDel = gson.fromJson(json, PedidoDeDeletarMedicamento.class);
+                        boolean deletou = pedidoDel.executar();
+                        this.usuario.receba(new ResultadoOperacao(deletou, "MedicamentoDeletado"));
+                        break;
+
+                    default:
+                        System.err.println("Comunicado desconhecido: " + tipo);
+                        break;
+                }
 
                         // 3. Cria e envia o objeto que contém a lista
                         this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO)); // Use 'recebe'

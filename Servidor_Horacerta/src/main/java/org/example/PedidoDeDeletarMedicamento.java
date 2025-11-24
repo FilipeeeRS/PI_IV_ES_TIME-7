@@ -1,25 +1,29 @@
 package org.example;
 
-import java.io.Serializable;
+import org.bson.types.ObjectId;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import static com.mongodb.client.model.Filters.eq;
 
 public class PedidoDeDeletarMedicamento extends Comunicado {
-    private static final long serialVersionUID = 1L;
 
-    private String idMedicamento;
+    private String id; // O ID que vem do Android
 
-    public PedidoDeDeletarMedicamento(String idMedicamento) {
-        if (idMedicamento == null || idMedicamento.isBlank())
-            throw new IllegalArgumentException("ID do medicamento inválido");
+    public boolean executar() {
+        try {
+            // --- ATENÇÃO AQUI ---
+            // Use a mesma conexão do "PedidoDeCriarMedicamento"
+            MongoDatabase database = new Conexao().getBanco(); // AJUSTE ESSA LINHA
+            MongoCollection<Document> collection = database.getCollection("medicamentos");
+            // --------------------
 
-        this.idMedicamento = idMedicamento;
-    }
+            ObjectId objectId = new ObjectId(this.id);
 
-    public String getIdMedicamento() {
-        return this.idMedicamento;
-    }
-
-    @Override
-    public String toString() {
-        return "PedidoDeDeletarMedicamento{" + "idMedicamento='" + idMedicamento + '\'' + '}';
+            collection.deleteOne(eq("_id", objectId));
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }
