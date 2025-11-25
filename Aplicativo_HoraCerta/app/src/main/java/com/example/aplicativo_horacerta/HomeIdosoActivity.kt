@@ -94,33 +94,26 @@ suspend fun buscarDadosCuidador(): Pair<String, String>? {
 }
 
 // --- FUNÇÃO DE TESTE SEM DEPENDER DO AMIGO ---
+// --- FUNÇÃO PARA SINCRONIZAR ALARMES ---
 suspend fun sincronizarRemediosEAgendar(context: Context, uidCuidador: String) {
-    // Chama a função que já existe na HomeCuidadorActivity (certifique-se que ela é acessível)
+    // 1. Reutiliza a função de listar que vocês já criaram para a HomeCuidador
+    // (Nota: Certifique-se que performListarMedicamentos está acessível aqui ou copie ela para cá)
     val resultadoLista = performListarMedicamentos(uidCuidador)
 
     if (resultadoLista?.medicamentos != null) {
-        Log.d("TESTE_PROJETO", "--- INICIO DA SINCRONIZAÇÃO ---")
-        Log.d("TESTE_PROJETO", "Remédios encontrados: ${resultadoLista.medicamentos.size}")
+        Log.d("SYNC", "Encontrados ${resultadoLista.medicamentos.size} remédios. Agendando...")
 
+        // 2. Para cada remédio, chama o código do seu AMIGO
         for (remedio in resultadoLista.medicamentos) {
-            // AQUI VOCÊ SÓ IMPRIME PARA TESTAR
-            Log.i("TESTE_PROJETO", "AGENDAR ALARME: ${remedio.nome} para o dia ${remedio.data} às ${remedio.horario}")
-
-            // Quando seu amigo terminar, você descomenta isso aqui:
-            /*
             AlarmeActivity.agendar(
                 context = context,
                 nome = remedio.nome,
-                dia = remedio.data,
-                horario = remedio.horario,
+                dia = remedio.data,       // Ajuste se o nome do campo for diferente
+                horario = remedio.horario, // Formato esperado "14:30"
                 descricao = remedio.descricao,
                 idUsuario = uidCuidador
             )
-            */
         }
-        Log.d("TESTE_PROJETO", "--- FIM DA SINCRONIZAÇÃO ---")
-    } else {
-        Log.e("TESTE_PROJETO", "Nenhum remédio veio do servidor.")
     }
 }
 

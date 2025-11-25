@@ -737,6 +737,7 @@ fun HistoricoItem(historico: HistoricoMedicamento) {
         }
     }
 }
+
 /*
 @Preview(showSystemUi = true, showBackground = true, name = "Aba Medicamentos")
 @Composable
@@ -754,4 +755,4 @@ fun PreviewHomeCuidadorHistorico() {
         HomeCuidador(initialTabIndex = 1, onLogoutClick = {})
     }
 }
-
+*/

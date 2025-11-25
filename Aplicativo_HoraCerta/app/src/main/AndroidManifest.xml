@@ -75,12 +75,6 @@
 
         <receiver android:name=".AlarmeReceiver" />
 
-        <activity
-            android:name=".AlarmeActivity"
-            android:exported="false"
-            android:showOnLockScreen="true" />
-
-        <receiver android:name=".AlarmeReceiver" />
 
     </application>
 
