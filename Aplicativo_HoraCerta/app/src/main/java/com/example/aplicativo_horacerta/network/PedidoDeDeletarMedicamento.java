@@ -10,40 +10,44 @@ import java.io.Serializable;
  * Herda de ComunicadoJson para incluir o campo de operação.
  */
 public class PedidoDeDeletarMedicamento extends ComunicadoJson implements Serializable {
-    private static final long serialVersionUID = 1L;
 
-    // Campo com o ID do Remédio (o _id do Mongo)
-    @SerializedName("id")
-    private String idMedicamento;
+   
 
-    // Campo com o ID do Usuário (filtro de segurança no servidor)
-    @SerializedName("idUsuario")
-    private String idUsuario;
+        private static final long serialVersionUID = 1L;
+
+        // Campo com o ID do Remédio (o _id do Mongo)
+        @SerializedName("id")
+        private String idMedicamento;
+
+        // Campo com o ID do Usuário (filtro de segurança no servidor)
+        @SerializedName("idUsuario")
+        private String idUsuario;
 
 
-    public PedidoDeDeletarMedicamento(String idMedicamento, String idUsuario) {
-        // Define o campo "operacao" fixo no ComunicadoJson para o Switch do servidor
-        super("PedidoDeDeletarMedicamento");
+        public PedidoDeDeletarMedicamento(String idMedicamento, String idUsuario) {
+                // Define o campo "operacao" fixo no ComunicadoJson para o Switch do servidor
+                super("PedidoDeDeletarMedicamento");
 
-        // Validação básica
-        if (idMedicamento == null || idMedicamento.isBlank()) {
-            throw new IllegalArgumentException("ID do medicamento inválido");
+                // Validação básica
+                if (idMedicamento == null || idMedicamento.isBlank()) {
+                        throw new IllegalArgumentException("ID do medicamento inválido");
+                }
+                if (idUsuario == null || idUsuario.isBlank()) {
+                        throw new IllegalArgumentException("ID do usuário inválido");
+                }
+
+                this.idMedicamento = idMedicamento;
+                this.idUsuario = idUsuario;
         }
-        if (idUsuario == null || idUsuario.isBlank()) {
-            throw new IllegalArgumentException("ID do usuário inválido");
+
+        // --- Getters ---
+
+        public String getIdMedicamento() {
+                return idMedicamento;
         }
 
-        this.idMedicamento = idMedicamento;
-        this.idUsuario = idUsuario;
-    }
-
-    // --- Getters ---
-
-    public String getIdMedicamento() {
-        return idMedicamento;
-    }
-
-    public String getIdUsuario() {
-        return idUsuario;
-    }
+        public String getIdUsuario() {
+                return idUsuario;
+        }
 }
+
