@@ -106,12 +106,19 @@ public class SupervisoraDeConexao extends Thread
 
                     case "BuscarCuidador":
                         PedidoBuscarCuidador pedidoC = gson.fromJson(json, PedidoBuscarCuidador.class);
-                        String nomeCuidador = pedidoC.processarBuscaNoBanco();
+                        String resultadoBusca = pedidoC.processarBuscaNoBanco();
 
-                        boolean achouC = (nomeCuidador != null);
-                        String nomeFinal = achouC ? nomeCuidador : "Nenhum cuidador vinculado";
+                        boolean achouC = (resultadoBusca != null);
+                        String nomeFinal = "Nenhum";
+                        String uidFinal = "";
 
-                        this.usuario.receba(new ResultadoBuscaCuidador(achouC, nomeFinal));
+                        if (achouC) {
+                            String[] partes = resultadoBusca.split(":::");
+                            nomeFinal = partes[0];
+                            uidFinal = partes.length > 1 ? partes[1] : "";
+                        }
+
+                        this.usuario.receba(new ResultadoBuscaCuidador(achouC, uidFinal, nomeFinal));
                         break;
 
                     case "PedidoDeCriarMedicamento":
@@ -135,7 +142,13 @@ public class SupervisoraDeConexao extends Thread
                         this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO)); // Use 'recebe'
                         break;
 
-                    default:
+                    case "PedidoDeDeletarMedicamento":
+                        PedidoDeDeletarMedicamento pedidoDel = gson.fromJson(json, PedidoDeDeletarMedicamento.class);
+                        boolean deletou = pedidoDel.executar();
+                        this.usuario.receba(new ResultadoOperacao(deletou, "MedicamentoDeletado"));
+                        break;
+
+                        default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
                 }

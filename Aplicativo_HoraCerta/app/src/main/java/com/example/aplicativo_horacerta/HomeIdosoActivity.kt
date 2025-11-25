@@ -3,6 +3,7 @@ package com.example.aplicativo_horacerta
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -21,11 +22,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.platform.LocalContext
-import com.example.aplicativo_horacerta.network.* import com.google.firebase.auth.FirebaseAuth
+import com.example.aplicativo_horacerta.network.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -55,14 +58,14 @@ class HomeIdosoActivity : ComponentActivity() {
     }
 }
 
-// --- FUNÇÃO DE REDE ---
-suspend fun buscarNomeCuidador(onResult: (String) -> Unit) {
+// --- FUNÇÃO DE BUSCAR CUIDADOR ---
+suspend fun buscarDadosCuidador(): Pair<String, String>? {
     val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
     val gson = Gson()
-    val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return
+    val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return null
 
-    withContext(Dispatchers.IO) {
+    return withContext(Dispatchers.IO) {
         var servidor: Parceiro? = null
         try {
             val conexao = Socket(SERVER_IP, SERVER_PORT)
@@ -71,254 +74,169 @@ suspend fun buscarNomeCuidador(onResult: (String) -> Unit) {
                 BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
             )
 
-            // Envia pedido
             servidor.receba(PedidoBuscarCuidador(emailIdoso))
 
-            // Recebe resposta (JSON Bruto)
             val jsonString = servidor.envieJson()
             val resultado = gson.fromJson(jsonString, ResultadoBuscaCuidador::class.java)
 
-            withContext(Dispatchers.Main) {
-                onResult(resultado.getNomeCuidador())
+            if (resultado.isEncontrou()) {
+                Pair(resultado.getNomeCuidador(), resultado.getUidCuidador())
+            } else {
+                null
             }
         } catch (e: Exception) {
             e.printStackTrace()
-            withContext(Dispatchers.Main) { onResult("Erro conexão") }
+            null
         } finally {
             servidor?.adeus()
         }
     }
 }
 
-// DADOS EXEMPLO
-data class ProximoMedicamento(
-    val nome: String,
-    val dia: String,
-    val horario: String
-)
+// --- FUNÇÃO DE TESTE SEM DEPENDER DO AMIGO ---
+suspend fun sincronizarRemediosEAgendar(context: Context, uidCuidador: String) {
+    // Chama a função que já existe na HomeCuidadorActivity (certifique-se que ela é acessível)
+    val resultadoLista = performListarMedicamentos(uidCuidador)
 
-val sampleProximoRemedio = ProximoMedicamento(
-    nome = "Buscopan",
-    dia = "SEGUNDA-FEIRA\n25/07",
-    horario = "13:00 HORAS"
-)
+    if (resultadoLista?.medicamentos != null) {
+        Log.d("TESTE_PROJETO", "--- INICIO DA SINCRONIZAÇÃO ---")
+        Log.d("TESTE_PROJETO", "Remédios encontrados: ${resultadoLista.medicamentos.size}")
+
+        for (remedio in resultadoLista.medicamentos) {
+            // AQUI VOCÊ SÓ IMPRIME PARA TESTAR
+            Log.i("TESTE_PROJETO", "AGENDAR ALARME: ${remedio.nome} para o dia ${remedio.data} às ${remedio.horario}")
+
+            // Quando seu amigo terminar, você descomenta isso aqui:
+            /*
+            AlarmeActivity.agendar(
+                context = context,
+                nome = remedio.nome,
+                dia = remedio.data,
+                horario = remedio.horario,
+                descricao = remedio.descricao,
+                idUsuario = uidCuidador
+            )
+            */
+        }
+        Log.d("TESTE_PROJETO", "--- FIM DA SINCRONIZAÇÃO ---")
+    } else {
+        Log.e("TESTE_PROJETO", "Nenhum remédio veio do servidor.")
+    }
+}
 
 @Composable
-fun HomeIdosoScreen(
-    medicamento: ProximoMedicamento = sampleProximoRemedio,
-    onLogoutClick: () -> Unit = {}
-) {
-    val cardColor = Color(0xFFEEEEEE)
-    val headerHeight = 130.dp
+fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     val context = LocalContext.current
-
-    // VARIAVEL QUE GUARDA O NOME DO CUIDADOR
     var nomeCuidador by remember { mutableStateOf("Buscando...") }
 
-    // CHAMA O SERVIDOR ASSIM QUE ABRE A TELA
+    // Lista de remédios para mostrar na tela
+    val listaRemedios = remember { mutableStateListOf<Medicamento>() }
+
     LaunchedEffect(Unit) {
-        buscarNomeCuidador { nome ->
-            nomeCuidador = nome
+        // 1. Descobre quem cuida de mim
+        val dadosCuidador = buscarDadosCuidador()
+
+        if (dadosCuidador != null) {
+            nomeCuidador = dadosCuidador.first // Nome
+            val uidCuidador = dadosCuidador.second // ID
+
+            // 2. Simula o agendamento (Logs no console)
+            sincronizarRemediosEAgendar(context, uidCuidador)
+
+            // 3. Atualiza a lista visual na tela
+            val resultado = performListarMedicamentos(uidCuidador)
+            if (resultado?.medicamentos != null) {
+                listaRemedios.clear()
+                listaRemedios.addAll(resultado.medicamentos)
+            }
+        } else {
+            nomeCuidador = "Nenhum vínculo"
         }
     }
 
     Scaffold(
         topBar = {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(headerHeight)
-            ) {
+            Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_background),
-                    contentDescription = "Fundo",
+                    contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
 
+                // LAYOUT CORRIGIDO PARA O BOTÃO NÃO SUMIR
                 Row(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "Logo",
-                        tint = Color.White,
-                        modifier = Modifier.size(100.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
+                    // Texto com peso (weight) para ocupar espaço mas deixar sobrar pro botão
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "IDOSO",
+                            "IDOSO",
                             color = Color.White,
-                            fontSize = 30.sp,
+                            fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
-                        // MOSTRA O NOME AQUI
                         Text(
-                            text = "Cuidador: $nomeCuidador",
+                            "Cuidador: $nomeCuidador",
                             color = Color.White,
-                            fontSize = 16.sp
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis // Põe "..." se for muito grande
                         )
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
-
-                    BotaoLogoutSeguro(
-                        context = context,
-                        modifier = Modifier.align(Alignment.CenterVertically), // Isso alinha ele na altura correta
-                        onLogoutSuccess = {
-                            val intent = Intent(context, FazerLoginActivity::class.java)
-                            intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-                            context.startActivity(intent)
-                        }
-                    )
+                    // Botão Logout fixo na direita
+                    IconButton(onClick = onLogoutClick) {
+                        Icon(Icons.Filled.ExitToApp, "Sair", tint = Color.White, modifier = Modifier.size(32.dp))
+                    }
                 }
             }
         },
         floatingActionButton = {
-            // ... (O resto do seu código continua igual) ...
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.Start,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                IconButton(
-                    onClick = {
-                        val intent = Intent(context, AcessibilidadeActivity::class.java)
-                        intent.putExtra("PERFIL_USUARIO", "IDOSO")
-                        context.startActivity(intent)
-                    },
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = "Acessibilidade",
-                        modifier = Modifier.size(100.dp),
-                        tint = Color.Black
-                    )
-                }
-            }
-        },
-        floatingActionButtonPosition = FabPosition.Center
-
+            // ... (Seu FAB)
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Color.White)
-                .padding(start = 16.dp, end = 16.dp, bottom = 16.dp, top = 100.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth(0.9f)
-                    .height(400.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = cardColor),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.SpaceAround
-                ) {
-                    Text("PRÓXIMO REMÉDIO", fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
-                    HorizontalDivider(modifier = Modifier
-                        .fillMaxWidth()
-                        .height(10.dp)
-                        .background(Color.Gray.copy(alpha = 0.3f)))
 
-                    // DADOS AINDA FAKE DO REMÉDIO
-                    Text(medicamento.nome, fontSize = 55.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
-                    Text(medicamento.dia, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
-                    Text(medicamento.horario, fontSize = 30.sp, fontWeight = FontWeight.Bold, color = Color.Black, textAlign = TextAlign.Center)
-                }
+            if (listaRemedios.isNotEmpty()) {
+                // Pega o primeiro remédio da lista para exibir no card grande
+                val proximo = listaRemedios[0]
+                CardProximoRemedio(nome = proximo.nome, horario = proximo.horario, dia = proximo.data)
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Total agendados: ${listaRemedios.size}", color = Color.Gray)
+            } else {
+                Text("Nenhum remédio agendado", fontSize = 20.sp, color = Color.Gray)
             }
         }
     }
 }
 
 @Composable
-fun BotaoLogoutSeguro(
-    context: Context,
-    modifier: Modifier = Modifier,
-    onLogoutSuccess: () -> Unit
-) {
-    val auth = FirebaseAuth.getInstance()
-
-    // Estados
-    var mostrarAlerta by remember { mutableStateOf(false) }
-    var emailDigitado by remember { mutableStateOf("") }
-    var erroValidacao by remember { mutableStateOf(false) }
-
-    // O Ícone na Barra
-    IconButton(
-        onClick = { mostrarAlerta = true },
-        modifier = modifier
+fun CardProximoRemedio(nome: String, horario: String, dia: String) {
+    Card(
+        modifier = Modifier.fillMaxWidth().height(300.dp),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEEEEEE)),
+        elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
-        Icon(
-            imageVector = Icons.Filled.ExitToApp,
-            contentDescription = "Sair com Segurança",
-            tint = Color.White,
-            modifier = Modifier.size(32.dp)
-        )
-    }
-
-    if (mostrarAlerta) {
-        AlertDialog(
-            onDismissRequest = { mostrarAlerta = false },
-            title = { Text(text = "Sair da Conta") },
-            text = {
-                Column {
-                    Text("Para segurança, confirme o e-mail:")
-                    Spacer(modifier = Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = emailDigitado,
-                        onValueChange = {
-                            emailDigitado = it
-                            erroValidacao = false
-                        },
-                        label = { Text("E-mail") },
-                        isError = erroValidacao,
-                        singleLine = true,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                    if (erroValidacao) {
-                        Text("E-mail incorreto!", color = Color.Red, fontSize = 12.sp)
-                    }
-                }
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        val emailReal = auth.currentUser?.email
-                        if (emailDigitado.trim().equals(emailReal, ignoreCase = true)) {
-                            mostrarAlerta = false
-                            val prefs = context.getSharedPreferences("PREFS_NAME", Context.MODE_PRIVATE)
-                            prefs.edit().clear().apply()
-                            auth.signOut()
-                            onLogoutSuccess()
-                        } else {
-                            erroValidacao = true
-                        }
-                    },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFD32F2F))
-                ) {
-                    Text("Confirmar")
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { mostrarAlerta = false }) { Text("Cancelar") }
-            }
-        )
+        Column(
+            modifier = Modifier.fillMaxSize().padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.SpaceAround
+        ) {
+            Text("PRÓXIMO REMÉDIO", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(nome, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+            Text(dia, fontSize = 20.sp)
+            Text(horario, fontSize = 20.sp, color = Color.Red, fontWeight = FontWeight.Bold)
+        }
     }
 }

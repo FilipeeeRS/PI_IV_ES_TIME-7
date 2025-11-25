@@ -37,6 +37,16 @@ import java.net.Socket
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import android.widget.Toast
+import androidx.compose.material.icons.filled.AccessTime // Ícone de relógio
+import android.app.TimePickerDialog
+import androidx.compose.ui.platform.LocalContext
+import java.util.Calendar
+import android.app.DatePickerDialog
+import android.widget.DatePicker
+import java.text.SimpleDateFormat
+import java.util.Locale
+import androidx.compose.material.icons.filled.DateRange
+
 class RemédioCriarActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -54,12 +64,12 @@ class RemédioCriarActivity : ComponentActivity() {
                         // Lógica para salvar o novo medicamento
                         lifecycleScope.launch {
                             performCriarMedicamento(nome, dia, horario, descricao, idUsuarioLogado, { resultado ->
-                                    // Aqui você trata o resultado retornado pelo servidor
-                                    println("Resultado do Cadastro: $resultado")
-                                    // Exibir uma mensagem (Toast) para o usuário seria ideal
-                                    Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
-                                    // Fecha a tela após a tentativa de cadastro
-                                }
+                                // Aqui você trata o resultado retornado pelo servidor
+                                println("Resultado do Cadastro: $resultado")
+                                // Exibir uma mensagem (Toast) para o usuário seria ideal
+                                Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
+                                // Fecha a tela após a tentativa de cadastro
+                            }
                             )
                         }
                     }
@@ -123,11 +133,42 @@ fun RemédioCriarScreen(
     var horario by remember { mutableStateOf("") }
     var descricao by remember { mutableStateOf("") }
 
+    val context = LocalContext.current
+    val calendar = Calendar.getInstance()
+
     // Cores do design
     val headerColor = Color(0xFF0A9396)
     val titleBarColor = Color(0xFFEEEEEE)
     val fieldBackgroundColor = Color(0xFFF0F0F0)
     val contentColor = Color.White
+
+    // Lógica do DatePicker (Dia)
+    val year = calendar.get(Calendar.YEAR)
+    val month = calendar.get(Calendar.MONTH)
+    val day = calendar.get(Calendar.DAY_OF_MONTH)
+
+    val datePickerDialog = DatePickerDialog(
+        context,
+        { _: DatePicker, selectedYear: Int, selectedMonth: Int, selectedDay: Int ->
+            val selectedCalendar = Calendar.getInstance()
+            selectedCalendar.set(selectedYear, selectedMonth, selectedDay)
+            val dateFormat = SimpleDateFormat("dd/MM EEEE", Locale("pt", "BR"))
+            dia = dateFormat.format(selectedCalendar.time).replaceFirstChar { it.uppercase() }
+        },
+        year, month, day
+    )
+
+    // Lógica do TimePicker (Horário)
+    val hour = calendar.get(Calendar.HOUR_OF_DAY)
+    val minute = calendar.get(Calendar.MINUTE)
+
+    val timePickerDialog = TimePickerDialog(
+        context,
+        { _, selectedHour, selectedMinute ->
+            horario = String.format("%02d:%02d", selectedHour, selectedMinute)
+        },
+        hour, minute, true
+    )
 
     Scaffold(
         topBar = {
@@ -234,9 +275,10 @@ fun RemédioCriarScreen(
             // Dia
             TextField(
                 value = dia,
-                onValueChange = { dia = it },
+                onValueChange = { },
                 label = { Text("DIA:") },
                 singleLine = true,
+                readOnly = true,
                 shape = RoundedCornerShape(8.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = fieldBackgroundColor,
@@ -245,8 +287,19 @@ fun RemédioCriarScreen(
                     unfocusedTextColor = Color.Black,
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
+
                 ),
-                modifier = Modifier.fillMaxWidth()
+                // Ícone de Calendário
+                trailingIcon = {
+                    IconButton(onClick = { datePickerDialog.show() }) {
+                        Icon(
+                            imageVector = Icons.Filled.DateRange,
+                            contentDescription = "Selecionar Data",
+                            tint = Color.Black
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() }
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -254,9 +307,10 @@ fun RemédioCriarScreen(
             // Horário
             TextField(
                 value = horario,
-                onValueChange = { horario = it },
+                onValueChange = { },
                 label = { Text("HORÁRIO:") },
                 singleLine = true,
+                readOnly = true,
                 shape = RoundedCornerShape(8.dp),
                 colors = TextFieldDefaults.colors(
                     focusedContainerColor = fieldBackgroundColor,
@@ -266,7 +320,17 @@ fun RemédioCriarScreen(
                     focusedIndicatorColor = Color.Transparent,
                     unfocusedIndicatorColor = Color.Transparent
                 ),
-                modifier = Modifier.fillMaxWidth()
+                // Ícone clicável no final
+                trailingIcon = {
+                    IconButton(onClick = { timePickerDialog.show() }) {
+                        Icon(
+                            imageVector = Icons.Filled.AccessTime,
+                            contentDescription = "Selecionar Horário",
+                            tint = Color.Black
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().clickable { timePickerDialog.show() }
             )
 
             Spacer(modifier = Modifier.height(16.dp))

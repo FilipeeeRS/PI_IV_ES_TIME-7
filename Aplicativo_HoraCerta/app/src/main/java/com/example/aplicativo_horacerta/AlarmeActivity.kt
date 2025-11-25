@@ -1,5 +1,4 @@
 package com.example.aplicativo_horacerta
-
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
