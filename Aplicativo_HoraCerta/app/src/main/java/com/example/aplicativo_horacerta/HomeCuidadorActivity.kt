@@ -70,7 +70,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.example.aplicativo_horacerta.network.PedidoDeDeletarMedicamento
-import java.io.Serializable
 
 class HomeCuidadorActivity : ComponentActivity() {
 
@@ -159,7 +158,7 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
 
     val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8
+    val CODIFICACAO = Charsets.UTF_8 // Use UTF-8, mas mude para Charsets.ISO_8859_1 se o problema de acentos voltar.
 
     val pedido = PedidoDeListarMedicamentos(userId)
     val gson = Gson()
@@ -167,27 +166,34 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
     return withContext(Dispatchers.IO) {
         var conexao: Socket? = null
         try {
-            conexao = Socket(SERVER_IP, SERVER_PORT)
+
+            conexao = Socket(SERVER_IP, SERVER_PORT) // 2. Inicializa a conexão
+
 
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
 
-            val servidor = Parceiro(conexao, receptor, transmissor)
+            val servidor = Parceiro(conexao, receptor, transmissor) // 4. Inicializa o Parceiro
 
-            // 1. Envia o pedido
-            servidor.receba(pedido)
-            transmissor.flush() // Garante que o pedido foi enviado antes de ler a resposta.
+            servidor.receba(pedido) // Envia o pedido
 
-            // 2. Aguarda e recebe a resposta
+
             val respostaComunicado: Any? = servidor.envie()
 
-            // REMOVIDO: conexao = null (Deixe o objeto ser fechado pelo finally)
+
+            conexao.close()
+            conexao = null
 
             if (respostaComunicado is ComunicadoJson) {
-                // Parsing do ComunicadoJson -> WrapperResposta -> ResultadoListaMedicamentos
+
+
                 val wrapperJson = respostaComunicado.json
+
+
                 val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
+
                 val jsonStringAninhada = wrapper.operacaoJsonString
+
                 val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoListaMedicamentos::class.java)
 
                 Log.d("Network", "JSON Interno Final: $jsonStringAninhada")
@@ -195,15 +201,15 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
 
             } else {
                 Log.e("Network", "Resposta inesperada: Não é um ComunicadoJson.")
-                return@withContext null
+                null
             }
 
         } catch (e: Exception) {
-            Log.e("Network", "Erro fatal ao listar medicamentos:", e)
+            Log.e("Network", "Erro fatal ao listar medicamentos (chegou ao parsing):", e)
             e.printStackTrace()
-            return@withContext null
+            null
         } finally {
-            // Garante que a conexão seja fechada no final
+            // Garante que a conexão seja fechada em caso de erro
             conexao?.close()
         }
     }
@@ -299,7 +305,7 @@ fun HomeCuidador(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        
+
                         Icon(
                             painter = painterResource(id = R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo",
@@ -417,7 +423,6 @@ fun HomeCuidador(
                 0 -> MedicamentosTab(
                     userId = userId ?: "",
                     medicamentosList = medicamentosList,
-                    // ... dentro de MedicamentosTab
                     onRemoveMedicamento = { medicamento ->
                         scope.launch {
                             // userId deve ser passado para a função de deleção!
@@ -437,7 +442,6 @@ fun HomeCuidador(
                             }
                         }
                     }
-// ...
                 )
                 1 -> HistoricoTab(historicoList =  historicoList)
             }
@@ -460,9 +464,8 @@ data class ResultadoOperacao(
 
 
 
+// Função de rede para deletar medicamento
 
-
-// ARQUIVO: HomeCuidadorActivity.kt (FUNÇÃO performDeleteMedicamento)
 suspend fun performDeleteMedicamento(
     idMedicamento: String,
     idUsuario: String? // userId do Cuidador
@@ -527,14 +530,6 @@ suspend fun performDeleteMedicamento(
         }
     }
 }
-
-// Mantenha esta classe auxiliar para lidar com o JSON aninhado, se o servidor a estiver usando:
-/*
-data class WrapperResposta(
-    @SerializedName("operacao") val operacaoJsonString: String
-)
-
- */
 ////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun MedicamentosTab(
@@ -760,4 +755,3 @@ fun PreviewHomeCuidadorHistorico() {
     }
 }
 
- */

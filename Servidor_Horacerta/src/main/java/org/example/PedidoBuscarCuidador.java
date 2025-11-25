@@ -42,8 +42,7 @@ public class PedidoBuscarCuidador extends ComunicadoJson {
 
                     if (docCuidador != null) {
                         String nome = docCuidador.getString("nome");
-                        System.out.println("[BUSCA CUIDADOR] Nome encontrado: " + nome);
-                        return nome;
+                        return nome + ":::" + uidCuidador;
                     }
                 }
             }

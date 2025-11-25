@@ -1,5 +1,6 @@
 package com.example.aplicativo_horacerta
 
+
 import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.KeyguardManager
@@ -9,7 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.media.Ringtone
 import android.media.RingtoneManager
-import android.os.Build
+
 import android.os.Bundle
 import android.os.Vibrator
 import android.os.VibratorManager

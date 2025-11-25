@@ -1,5 +1,6 @@
 package com.example.aplicativo_horacerta
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -11,7 +12,6 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -19,17 +19,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-// IMPORTANTE: Assumimos que 'Parceiro', 'Comunicado', 'PedidoBuscarCuidador', etc.
-// estão definidos em Java na pasta 'network'
-import com.example.aplicativo_horacerta.network.* import com.google.firebase.auth.FirebaseAuth
+import androidx.compose.ui.platform.LocalContext
+import com.example.aplicativo_horacerta.network.*
+import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
-import com.google.gson.annotations.SerializedName
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,313 +58,174 @@ class HomeIdosoActivity : ComponentActivity() {
     }
 }
 
-// --- ESTRUTURAS DE DADOS DE MEDICAMENTO ---
-data class Medicamentos(
-    val id: String,
-    val nome: String,
-    val tomou: Boolean,
-    @SerializedName("dia") val data: String,
-    val horario: String,
-    val descricao: String,
-    val idUsuario: String
-)
-
-data class ResultadoListaMedica(
-    @SerializedName("tipo") val tipo: String = "ResultadoListaMedicamentos",
-    @SerializedName("medicamentos") val medicamentos: List<Medicamentos>?
-) : Comunicado()
-
-// CLASSE DE WRAPPER ATUALIZADA PARA WrapperRespostas
-data class WrapperRespostas(
-    @SerializedName("operacao") val operacaoJsonString: String
-)
-
-// --- FUNÇÃO DE REDE: Buscar Nome do Cuidador ---
-suspend fun buscarNomeCuidador(onResult: (String) -> Unit) {
+// --- FUNÇÃO DE BUSCAR CUIDADOR ---
+suspend fun buscarDadosCuidador(): Pair<String, String>? {
     val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8
     val gson = Gson()
-    val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return
-
-    val pedido = PedidoBuscarCuidador(emailIdoso)
-
-    withContext(Dispatchers.IO) {
-        var conexao: Socket? = null
-        try {
-            conexao = Socket(SERVER_IP, SERVER_PORT)
-
-            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
-            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
-
-            val servidor = Parceiro(conexao, receptor, transmissor)
-
-            servidor.receba(pedido)
-            transmissor.flush()
-
-            val jsonString = servidor.envieJson()
-            if (jsonString.isNullOrBlank()) {
-                withContext(Dispatchers.Main) { onResult("Erro: Resposta vazia") }
-                return@withContext
-            }
-
-            val resultado = gson.fromJson(jsonString, ResultadoBuscaCuidador::class.java)
-
-            withContext(Dispatchers.Main) {
-                onResult(resultado.getNomeCuidador())
-            }
-        } catch (e: Exception) {
-            Log.e("NetworkIdoso", "Erro ao buscar cuidador:", e)
-            withContext(Dispatchers.Main) { onResult("Erro conexão") }
-        } finally {
-            conexao?.close()
-        }
-    }
-}
-
-
-// --- FUNÇÃO DE REDE: Listar Medicamentos para o Idoso ---
-suspend fun performListarMedicamentosIdoso(userId: String): ResultadoListaMedica? {
-
-    val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8
-
-    val pedido = PedidoDeListarMedicamentos(userId)
-    val gson = Gson()
+    val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return null
 
     return withContext(Dispatchers.IO) {
-        var conexao: Socket? = null
+        var servidor: Parceiro? = null
         try {
-            conexao = Socket(SERVER_IP, SERVER_PORT)
+            val conexao = Socket(SERVER_IP, SERVER_PORT)
+            servidor = Parceiro(conexao,
+                BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8)),
+                BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
+            )
 
-            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
-            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
+            servidor.receba(PedidoBuscarCuidador(emailIdoso))
 
-            val servidor = Parceiro(conexao, receptor, transmissor)
+            val jsonString = servidor.envieJson()
+            val resultado = gson.fromJson(jsonString, ResultadoBuscaCuidador::class.java)
 
-            // 1. Envia o pedido
-            servidor.receba(pedido)
-            transmissor.flush()
-
-            // 2. Aguarda e recebe a resposta
-            val respostaComunicado: Any? = servidor.envie()
-
-            if (respostaComunicado is ComunicadoJson) {
-                val wrapperJson = respostaComunicado.json
-
-                // Parsing: ComunicadoJson -> WrapperRespostas (CLASSE ATUALIZADA) -> ResultadoListaMedica
-                val wrapper = gson.fromJson(wrapperJson, WrapperRespostas::class.java) // ATUALIZADO AQUI
-                val jsonStringAninhada = wrapper.operacaoJsonString
-                val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoListaMedica::class.java)
-
-                Log.d("NetworkIdoso", "JSON Interno Final: $jsonStringAninhada")
-                return@withContext resultadoFinal
-
+            if (resultado.isEncontrou()) {
+                Pair(resultado.getNomeCuidador(), resultado.getUidCuidador())
             } else {
-                Log.e("NetworkIdoso", "Resposta inesperada: Não é um ComunicadoJson.")
-                return@withContext null
+                null
             }
-
         } catch (e: Exception) {
-            Log.e("NetworkIdoso", "Erro fatal ao listar medicamentos:", e)
-            return@withContext null
+            e.printStackTrace()
+            null
         } finally {
-            conexao?.close()
+            servidor?.adeus()
         }
     }
 }
 
+// --- FUNÇÃO DE TESTE SEM DEPENDER DO AMIGO ---
+suspend fun sincronizarRemediosEAgendar(context: Context, uidCuidador: String) {
+    // Chama a função que já existe na HomeCuidadorActivity (certifique-se que ela é acessível)
+    val resultadoLista = performListarMedicamentos(uidCuidador)
 
-// --- COMPOSABLES ---
+    if (resultadoLista?.medicamentos != null) {
+        Log.d("TESTE_PROJETO", "--- INICIO DA SINCRONIZAÇÃO ---")
+        Log.d("TESTE_PROJETO", "Remédios encontrados: ${resultadoLista.medicamentos.size}")
+
+        for (remedio in resultadoLista.medicamentos) {
+            // AQUI VOCÊ SÓ IMPRIME PARA TESTAR
+            Log.i("TESTE_PROJETO", "AGENDAR ALARME: ${remedio.nome} para o dia ${remedio.data} às ${remedio.horario}")
+
+            // Quando seu amigo terminar, você descomenta isso aqui:
+            /*
+            AlarmeActivity.agendar(
+                context = context,
+                nome = remedio.nome,
+                dia = remedio.data,
+                horario = remedio.horario,
+                descricao = remedio.descricao,
+                idUsuario = uidCuidador
+            )
+            */
+        }
+        Log.d("TESTE_PROJETO", "--- FIM DA SINCRONIZAÇÃO ---")
+    } else {
+        Log.e("TESTE_PROJETO", "Nenhum remédio veio do servidor.")
+    }
+}
 
 @Composable
-fun HomeIdosoScreen(
-    onLogoutClick: () -> Unit = {}
-) {
-    val cardColor = Color(0xFFEEEEEE)
-    val headerHeight = 130.dp
+fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-
-    val userId = FirebaseAuth.getInstance().currentUser?.uid
-
-    // VARIÁVEIS DE ESTADO
     var nomeCuidador by remember { mutableStateOf("Buscando...") }
-    val medicamentosList = remember { mutableStateListOf<Medicamentos>() }
-    var isLoading by remember { mutableStateOf(true) }
-    var listaCarregada by remember { mutableStateOf(false) }
 
-    // Função para carregar os medicamentos
-    val carregarMedicamentos = {
-        if (userId != null) {
-            scope.launch {
-                isLoading = true
-                val resultado = performListarMedicamentosIdoso(userId)
-                if (resultado?.medicamentos != null) {
-                    medicamentosList.clear()
-                    val sorted = resultado.medicamentos.sortedWith(
-                        compareBy<Medicamentos> { it.data }.thenBy { it.horario }
-                    )
-                    medicamentosList.addAll(sorted)
-                    listaCarregada = true
-                } else {
-                    medicamentosList.clear()
-                    listaCarregada = false
-                }
-                isLoading = false
+    // Lista de remédios para mostrar na tela
+    val listaRemedios = remember { mutableStateListOf<Medicamento>() }
+
+    LaunchedEffect(Unit) {
+        // 1. Descobre quem cuida de mim
+        val dadosCuidador = buscarDadosCuidador()
+
+        if (dadosCuidador != null) {
+            nomeCuidador = dadosCuidador.first // Nome
+            val uidCuidador = dadosCuidador.second // ID
+
+            // 2. Simula o agendamento (Logs no console)
+            sincronizarRemediosEAgendar(context, uidCuidador)
+
+            // 3. Atualiza a lista visual na tela
+            val resultado = performListarMedicamentos(uidCuidador)
+            if (resultado?.medicamentos != null) {
+                listaRemedios.clear()
+                listaRemedios.addAll(resultado.medicamentos)
             }
         } else {
-            isLoading = false
-            listaCarregada = false
+            nomeCuidador = "Nenhum vínculo"
         }
-    }
-
-    // Carregamento inicial de dados
-    LaunchedEffect(Unit) {
-        buscarNomeCuidador { nome -> nomeCuidador = nome }
-        carregarMedicamentos()
     }
 
     Scaffold(
         topBar = {
-            // Header/TopBar
-            Box(
-                modifier = Modifier.fillMaxWidth().height(headerHeight)
-            ) {
-                //
+            Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_launcher_background),
-                    contentDescription = "Fundo",
+                    contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Crop
                 )
 
-                // Conteúdo do Header
+                // LAYOUT CORRIGIDO PARA O BOTÃO NÃO SUMIR
                 Row(
-                    modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                    modifier = Modifier.fillMaxSize().padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    //
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                        contentDescription = "Logo",
-                        tint = Color.White,
-                        modifier = Modifier.size(60.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    Column {
+                    // Texto com peso (weight) para ocupar espaço mas deixar sobrar pro botão
+                    Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "IDOSO",
+                            "IDOSO",
                             color = Color.White,
                             fontSize = 24.sp,
                             fontWeight = FontWeight.Bold
                         )
                         Text(
-                            text = "Cuidador: $nomeCuidador",
+                            "Cuidador: $nomeCuidador",
                             color = Color.White,
-                            fontSize = 14.sp
+                            fontSize = 14.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis // Põe "..." se for muito grande
                         )
                     }
 
-                    Spacer(modifier = Modifier.weight(1f))
-
+                    // Botão Logout fixo na direita
                     IconButton(onClick = onLogoutClick) {
-                        Icon(
-                            imageVector = Icons.Filled.ExitToApp,
-                            contentDescription = "Sair",
-                            tint = Color.White,
-                            modifier = Modifier.size(35.dp)
-                        )
+                        Icon(Icons.Filled.ExitToApp, "Sair", tint = Color.White, modifier = Modifier.size(32.dp))
                     }
                 }
             }
         },
         floatingActionButton = {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Bottom
-            ) {
-                // Botão Acessibilidade
-                FloatingActionButton(
-                    onClick = {
-                        val intent = Intent(context, AcessibilidadeActivity::class.java)
-                        intent.putExtra("PERFIL_USUARIO", "IDOSO")
-                        context.startActivity(intent)
-                    },
-                    containerColor = MaterialTheme.colorScheme.secondary,
-                    contentColor = Color.White
-                ) {
-                    Icon(
-                        imageVector = Icons.Outlined.Info,
-                        contentDescription = "Acessibilidade",
-                        modifier = Modifier.size(30.dp),
-                    )
-                }
-
-                // Botão Recarregar (Refresh)
-                FloatingActionButton(
-                    onClick = carregarMedicamentos as () -> Unit,
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Recarregar Lista",
-                        modifier = Modifier.size(30.dp),
-                    )
-                }
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End
-
+            // ... (Seu FAB)
+        }
     ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .background(Color.White)
-                .padding(horizontal = 16.dp),
+                .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            Spacer(modifier = Modifier.height(32.dp))
 
-            // --- Exibir o conteúdo principal: Próximo Remédio ---
-            when {
-                isLoading -> CircularProgressIndicator(modifier = Modifier.padding(top = 100.dp))
-                medicamentosList.isEmpty() && listaCarregada -> Text(
-                    "Nenhum medicamento registrado.",
-                    modifier = Modifier.padding(top = 100.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 20.sp,
-                    color = Color.Gray
-                )
-                medicamentosList.isNotEmpty() -> ProximoRemedioCard(
-                    proximo = medicamentosList.first(),
-                    cardColor = cardColor
-                )
-                else -> Text(
-                    "Falha ao carregar dados.",
-                    modifier = Modifier.padding(top = 100.dp),
-                    textAlign = TextAlign.Center,
-                    fontSize = 20.sp,
-                    color = Color.Red
-                )
+            if (listaRemedios.isNotEmpty()) {
+                // Pega o primeiro remédio da lista para exibir no card grande
+                val proximo = listaRemedios[0]
+                CardProximoRemedio(nome = proximo.nome, horario = proximo.horario, dia = proximo.data)
+
+                Spacer(modifier = Modifier.height(16.dp))
+                Text("Total agendados: ${listaRemedios.size}", color = Color.Gray)
+            } else {
+                Text("Nenhum remédio agendado", fontSize = 20.sp, color = Color.Gray)
             }
         }
     }
 }
 
-
-// --- Card do Próximo Remédio ---
 @Composable
-fun ProximoRemedioCard(proximo: Medicamentos, cardColor: Color) {
+fun CardProximoRemedio(nome: String, horario: String, dia: String) {
     Card(
-        modifier = Modifier.fillMaxWidth(0.9f).heightIn(min = 300.dp, max = 400.dp),
+        modifier = Modifier.fillMaxWidth().height(300.dp),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = cardColor),
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFEEEEEE)),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
@@ -372,38 +233,10 @@ fun ProximoRemedioCard(proximo: Medicamentos, cardColor: Color) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceAround
         ) {
-            Text(
-                "PRÓXIMO REMÉDIO",
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Black,
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
-            HorizontalDivider(
-                modifier = Modifier.fillMaxWidth().height(2.dp).background(Color.Gray.copy(alpha = 0.5f))
-            )
-
-            Text(
-                proximo.nome,
-                fontSize = 45.sp,
-                fontWeight = FontWeight.Bold,
-                color = Color.Black,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                proximo.data,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = Color.DarkGray,
-                textAlign = TextAlign.Center
-            )
-            Text(
-                "${proximo.horario} HORAS",
-                fontSize = 30.sp,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary,
-                textAlign = TextAlign.Center
-            )
+            Text("PRÓXIMO REMÉDIO", fontSize = 24.sp, fontWeight = FontWeight.Bold)
+            Text(nome, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+            Text(dia, fontSize = 20.sp)
+            Text(horario, fontSize = 20.sp, color = Color.Red, fontWeight = FontWeight.Bold)
         }
     }
 }

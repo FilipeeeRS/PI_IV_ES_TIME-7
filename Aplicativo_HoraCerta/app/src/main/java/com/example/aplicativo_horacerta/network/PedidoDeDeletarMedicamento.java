@@ -1,3 +1,4 @@
+
 package com.example.aplicativo_horacerta.network;
 
 import com.google.gson.annotations.SerializedName;
@@ -9,6 +10,9 @@ import java.io.Serializable;
  * Herda de ComunicadoJson para incluir o campo de operação.
  */
 public class PedidoDeDeletarMedicamento extends ComunicadoJson implements Serializable {
+
+   
+
         private static final long serialVersionUID = 1L;
 
         // Campo com o ID do Remédio (o _id do Mongo)
@@ -46,3 +50,4 @@ public class PedidoDeDeletarMedicamento extends ComunicadoJson implements Serial
                 return idUsuario;
         }
 }
+

@@ -68,6 +68,12 @@
             android:name=".HomeIdosoActivity"
             android:exported="false"
             android:theme="@style/Theme.Aplicativo_HoraCerta" />
+        <activity
+            android:name=".AlarmeActivity"
+            android:exported="false"
+            android:showOnLockScreen="true" />
+
+        <receiver android:name=".AlarmeReceiver" />
 
         <activity
             android:name=".AlarmeActivity"
@@ -77,5 +83,9 @@
         <receiver android:name=".AlarmeReceiver" />
 
     </application>
+
+    <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
 </manifest>

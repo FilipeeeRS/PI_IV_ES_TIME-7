@@ -65,13 +65,14 @@ public class Medicamento extends ComunicadoJson {
 
         Medicamento m = new Medicamento();
 
-
         ObjectId objectId = doc.getObjectId("_id");
         if (objectId != null) {
-            m.setId(objectId.toString());
+            // CORREÇÃO: toHexString() garante que venha apenas o código limpo "6924ef..."
+            m.setId(objectId.toHexString());
         } else {
-            // Caso raro onde o _id não é ObjectId
-            m.setId(doc.getString("id"));
+            // Fallback caso o ID tenha sido salvo como String manualmente
+            Object idObj = doc.get("_id");
+            if (idObj != null) m.setId(idObj.toString());
         }
 
         // Mapeamento dos campos String
@@ -82,7 +83,6 @@ public class Medicamento extends ComunicadoJson {
         m.setIdUsuario(doc.getString("idUsuario"));
 
         // Tratamento do campo booleano 'tomou'
-        // Usa o método getBoolean com um valor padrão (false) para evitar NullPointer/erros.
         m.setTomou(doc.getBoolean("tomou", false));
 
         return m;
