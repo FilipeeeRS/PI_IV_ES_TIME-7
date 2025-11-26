@@ -48,7 +48,6 @@ import java.net.Socket
 import com.google.gson.Gson
 
 
-
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.outlined.AddCircleOutline
 import androidx.core.content.ContextCompat.startActivity
@@ -58,6 +57,7 @@ import java.io.BufferedReader
 import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
+import java.io.Serializable // Necessário para passar o objeto Medicamento
 
 import com.example.aplicativo_horacerta.FazerLoginActivity
 import com.example.aplicativo_horacerta.FazerLoginActivity.Companion.KEY_USER_UID
@@ -141,7 +141,7 @@ data class Medicamento(
 
     val descricao: String,
     val idUsuario: String
-)
+) : Serializable // <-- Adicionei Serializable aqui para que o objeto possa ser passado via Intent
 
 
 data class ResultadoListaMedicamentos(
@@ -580,15 +580,21 @@ fun MedicamentosTab(
                     onDeleteClick = {
                         medicamentoParaDeletar = medicamento
                         showDeleteDialog = true
-                    }
-                    // REMOVA O BLOCO onEditClick COMPLETO:
-                    /*
+                    },
+                    // CORREÇÃO APLICADA AQUI:
+                    // 1. Passa o objeto Medicamento completo ("DADOS_MEDICAMENTO").
+                    // 2. Mantém a passagem do ID do Usuário Logado (KEY_USER_UID).
                     onEditClick = {
                         val intent = Intent(context, RemédioEditarActivity::class.java)
-                        intent.putExtra("MEDICAMENTO_ID", medicamento.id.toString())
+
+                        // 1. PASSANDO O OBJETO MEDICAMENTO COMPLETO
+                        intent.putExtra("DADOS_MEDICAMENTO", medicamento as Serializable)
+
+                        // 2. PASSANDO O ID DO USUÁRIO
+                        intent.putExtra(KEY_USER_UID, userId)
+
                         context.startActivity(intent)
                     }
-                    */
                 )
             }
         }
@@ -650,7 +656,9 @@ fun DeleteConfirmationDialog(
 @Composable
 fun MedicamentoItem(
     medicamento: Medicamento,
-    onDeleteClick: () -> Unit
+    onDeleteClick: () -> Unit,
+    // Adicionar o novo callback para edição
+    onEditClick: () -> Unit // <-- NOVO PARAMETRO
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -671,8 +679,14 @@ fun MedicamentoItem(
                 Text(text = "Dia: ${medicamento.data}", fontSize = 14.sp, color = Color.Gray)
                 Text(text = "Horário: ${medicamento.horario}", fontSize = 14.sp, color = Color.Gray)
             }
-            IconButton(onClick = onDeleteClick) {Icon(Icons.Filled.Delete, contentDescription = "Deletar", tint = Color.Gray,modifier = Modifier.size(28.dp)) }
-            //IconButton(onClick = onEditClick) { Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.size(28.dp)) }
+            // Habilita o botão de Editar
+            IconButton(onClick = onEditClick) {
+                Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.size(28.dp))
+            }
+            // Botão Deletar
+            IconButton(onClick = onDeleteClick) {
+                Icon(Icons.Filled.Delete, contentDescription = "Deletar", tint = Color.Gray, modifier = Modifier.size(28.dp))
+            }
         }
     }
 }
