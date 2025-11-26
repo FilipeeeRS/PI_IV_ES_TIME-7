@@ -174,7 +174,7 @@ class AlarmeActivity : ComponentActivity() {
             dia: String,
             horario: String,
             descricao: String,
-            idUsuario: String // <--- OBRIGATÓRIO: Quem é o dono do remédio?
+            idUsuario: String
         ) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 

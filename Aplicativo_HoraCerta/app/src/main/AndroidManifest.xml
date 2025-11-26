@@ -70,16 +70,13 @@
             android:theme="@style/Theme.Aplicativo_HoraCerta" />
         <activity
             android:name=".AlarmeActivity"
-            android:exported="false"
-            android:showOnLockScreen="true" />
+            android:exported="true"
+            android:showOnLockScreen="true"
+            android:showWhenLocked="true"
+            android:turnScreenOn="true" />
 
-        <receiver android:name=".AlarmeReceiver" />
-
+        <receiver android:name=".AlarmeReceiver"
+            android:exported="true" />
 
     </application>
-
-    <uses-permission android:name="android.permission.VIBRATE" />
-    <uses-permission android:name="android.permission.WAKE_LOCK" />
-    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
-
 </manifest>

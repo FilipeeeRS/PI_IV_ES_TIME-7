@@ -77,14 +77,12 @@ class RemédioCriarActivity : ComponentActivity() {
                             return@RemédioCriarScreen
                         }
 
-                        // Salvar o novo medicamento
+                        // Salvar novo medicamento
                         lifecycleScope.launch {
                             performCriarMedicamento(nome, dia, horario, descricao, idUsuarioLogado, { resultado ->
-                                // Aqui você trata o resultado retornado pelo servidor
+                                // Trata o resultado retornado pelo servidor
                                 println("Resultado do Cadastro: $resultado")
-                                // Exibir uma mensagem (Toast) para o usuário seria ideal
                                 Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
-                                // Fecha a tela após a tentativa de cadastro
                             }
                             )
                             finish()
@@ -152,6 +150,7 @@ suspend fun performCriarMedicamento(
         }
     }
 }
+
 @Composable
 fun RemédioCriarScreen(
     onBackClick: () -> Unit,
@@ -353,7 +352,7 @@ fun RemédioCriarScreen(
                     .fillMaxWidth()
                     .height(150.dp)
             )
-            
+
             Spacer(Modifier.height(32.dp))
 
             Box(
