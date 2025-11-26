@@ -61,6 +61,20 @@ class RemédioCriarActivity : ComponentActivity() {
                         finish()
                     },
                     onSaveClick = { nome, dia, horario, descricao ->
+
+                        // 1. Verifica se os campos estão preenchidos (básico)
+                        if (nome.isBlank() || dia.isBlank() || horario.isBlank()) {
+                            Toast.makeText(this, "Preencha todos os campos obrigatórios!", Toast.LENGTH_SHORT).show()
+                            return@RemédioCriarScreen // Para a execução aqui
+                        }
+
+                        // 2. Valida se a data e hora são futuras
+                        if (!isDataHorarioValido(dia, horario)) {
+                            Toast.makeText(this, "A data e horário devem ser no futuro!", Toast.LENGTH_LONG).show()
+                            return@RemédioCriarScreen // Para a execução aqui
+                        }
+
+
                         // Lógica para salvar o novo medicamento
                         lifecycleScope.launch {
                             performCriarMedicamento(nome, dia, horario, descricao, idUsuarioLogado, { resultado ->
@@ -78,6 +92,27 @@ class RemédioCriarActivity : ComponentActivity() {
         }
     }
 }
+
+fun isDataHorarioValido(dia: String, horario: String): Boolean {
+    return try {
+        // Define o formato que suas Strings estão vindo (ajuste se necessário)
+        // Exemplo: dia = "26/11/2025", horario = "14:30"
+        val format = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale.getDefault())
+        format.isLenient = false // Garante que datas como 30/02 não passem
+
+        // Junta as strings e converte para Date
+        val dataInformada = format.parse("$dia $horario")
+        val dataAtual = Calendar.getInstance().time
+
+        // Retorna true se a data informada for DEPOIS da atual
+        dataInformada != null && dataInformada.after(dataAtual)
+    } catch (e: Exception) {
+        e.printStackTrace()
+        false
+    }
+}
+
+
 suspend fun performCriarMedicamento(
     nome: String,
     dia: String,
