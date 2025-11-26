@@ -1,25 +1,65 @@
 package org.example;
 
-import java.io.Serializable;
+import com.mongodb.client.MongoClient;
+import com.mongodb.client.MongoClients;
+import com.mongodb.client.MongoCollection;
+import com.mongodb.client.MongoDatabase;
+import com.mongodb.client.result.DeleteResult;
+import io.github.cdimascio.dotenv.Dotenv;
+import org.bson.Document;
+import org.bson.types.ObjectId;
+import static com.mongodb.client.model.Filters.and;
+import static com.mongodb.client.model.Filters.eq;
 
-public class PedidoDeDeletarMedicamento extends Comunicado {
-    private static final long serialVersionUID = 1L;
+public class PedidoDeDeletarMedicamento extends ComunicadoJson {
 
-    private String idMedicamento;
-
-    public PedidoDeDeletarMedicamento(String idMedicamento) {
-        if (idMedicamento == null || idMedicamento.isBlank())
-            throw new IllegalArgumentException("ID do medicamento inválido");
-
-        this.idMedicamento = idMedicamento;
+    private String id;
+    private String idUsuario;
+    public PedidoDeDeletarMedicamento() {
+        super("PedidoDeDeletarMedicamento");
     }
 
-    public String getIdMedicamento() {
-        return this.idMedicamento;
-    }
+    public boolean executar() {
+        try {
+            Dotenv dotenv = Dotenv.load();
+            String uri = dotenv.get("MONGO_URI");
+            String dbName = dotenv.get("MONGO_DATABASE", "sample_horacerta");
 
-    @Override
-    public String toString() {
-        return "PedidoDeDeletarMedicamento{" + "idMedicamento='" + idMedicamento + '\'' + '}';
+            try (MongoClient client = MongoClients.create(uri)) {
+                MongoDatabase db = client.getDatabase(dbName);
+                MongoCollection<Document> collection = db.getCollection("medicamentos");
+
+                ObjectId objectId = new ObjectId(this.id);
+
+                // FILTRO DE SEGURANÇA
+                DeleteResult result = collection.deleteOne(
+                        and(
+                                eq("_id", objectId),
+                                eq("idUsuario", this.idUsuario)
+                        )
+                );
+
+                long count = result.getDeletedCount();
+
+                System.out.println("[MEDICAMENTO] Tentativa de delete. ID: " + this.id + ". Deletados: " + count);
+
+                if (count == 1) {
+                    // SUCESSO!
+                    return new ResultadoOperacao(true, "Medicamento deletado com sucesso.").getSucesso();
+                } else {
+                    // FALHA (Nenhum documento deletado - ID não encontrado ou não pertence ao usuário)
+                    return new ResultadoOperacao(false, "Falha ao deletar: Medicamento não encontrado ou permissão negada.").getSucesso();
+                }
+
+            } catch (com.mongodb.MongoException e) {
+                System.err.println("Erro ao interagir com o MongoDB durante deleção: " + e.getMessage());
+                // FALHA: Erro de banco
+                return new ResultadoOperacao(false, "Erro interno do servidor (MongoDB): " + e.getMessage()).getSucesso();
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            // FALHA: Erro geral
+            return new ResultadoOperacao(false, "Erro interno inesperado: " + e.getMessage()).getSucesso();
+        }
     }
 }

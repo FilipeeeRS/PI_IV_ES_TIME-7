@@ -7,6 +7,8 @@ public class ResultadoBuscaCuidador extends ComunicadoJson {
     @SerializedName("nomeCuidador")
     private String nomeCuidador;
 
+    @SerializedName("uidCuidador")
+    private String uidCuidador;
     @SerializedName("encontrou")
     private boolean encontrou;
 
@@ -17,5 +19,6 @@ public class ResultadoBuscaCuidador extends ComunicadoJson {
     }
 
     public String getNomeCuidador() { return nomeCuidador; }
+    public String getUidCuidador() { return uidCuidador; }
     public boolean isEncontrou() { return encontrou; }
 }

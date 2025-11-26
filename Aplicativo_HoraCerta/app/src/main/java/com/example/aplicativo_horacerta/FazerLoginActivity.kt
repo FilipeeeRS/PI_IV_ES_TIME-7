@@ -240,9 +240,11 @@ suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Un
             withContext(Dispatchers.Main) {
                 onResult("ERRO_CONEXAO:Falha na rede ou no processamento da resposta: ${e.message}")
             }
-        } finally {
+        } /*finally {
             servidor?.adeus()
         }
+
+        */
     }
 }
 
