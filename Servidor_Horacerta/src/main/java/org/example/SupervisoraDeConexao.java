@@ -142,6 +142,16 @@ public class SupervisoraDeConexao extends Thread
                         this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO)); // Use 'recebe'
                         break;
 
+                    case "PedidoDeEditarMedicamento":
+                        PedidoDeEditarMedicamento pedidoEdicao = gson.fromJson(json, PedidoDeEditarMedicamento.class);
+                        boolean editou = pedidoEdicao.executar(); // <-- Assume a existência do método 'executar'
+
+                        String tagResposta = editou ? "EdicaoSucesso" : "EdicaoFalha";
+
+                        // Responde com o resultado da operação
+                        this.usuario.receba(new ResultadoOperacao(editou, tagResposta));
+                        break;
+
                     case "PedidoDeDeletarMedicamento":
                         PedidoDeDeletarMedicamento pedidoDel = gson.fromJson(json, PedidoDeDeletarMedicamento.class);
                         boolean deletou = pedidoDel.executar();
