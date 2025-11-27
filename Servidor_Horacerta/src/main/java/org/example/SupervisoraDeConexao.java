@@ -158,6 +158,18 @@ public class SupervisoraDeConexao extends Thread
                         this.usuario.receba(new ResultadoOperacao(deletou, "MedicamentoDeletado"));
                         break;
 
+
+                    case "ConfirmarAlarme":
+                        PedidoDeConfirmarAlarme pedidoAlarme = gson.fromJson(json, PedidoDeConfirmarAlarme.class);
+
+                        // Executa a lógica de marcar como "tomou = true" no banco
+                        boolean confirmou = pedidoAlarme.executar();
+
+                        // Responde para o Android que deu certo
+                        String msgAlarme = confirmou ? "Confirmado com Sucesso" : "Erro ao confirmar";
+                        this.usuario.receba(new ResultadoOperacao(confirmou, msgAlarme));
+                        break;
+
                         default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
