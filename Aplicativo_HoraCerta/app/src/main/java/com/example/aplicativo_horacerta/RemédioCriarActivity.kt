@@ -105,7 +105,9 @@ fun isDataHorarioValido(dia: String, horario: String): Boolean {
 suspend fun performCriarMedicamento(
     nome: String, dia: String, horario: String, descricao: String, idUsuario: String?, onResult: (String) -> Unit
 ) {
-    val SERVER_IP = "10.0.2.2"
+
+    val SERVER_IP = "10.0.116.3"
+    //val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
     val pedido = PedidoDeCriarMedicamento(nome, dia, horario, descricao, idUsuario)
 

@@ -46,6 +46,10 @@ import java.io.ObjectInputStream
 import java.io.ObjectOutputStream
 import java.net.Socket
 import com.google.gson.Gson
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
+import java.util.Date
 
 
 import androidx.compose.material.icons.filled.ExitToApp
@@ -129,26 +133,18 @@ class HomeCuidadorActivity : ComponentActivity() {
 data class Medicamento(
     // CORREÇÃO 1: Mudar de Int para String
     val id: String,
-
     val nome: String,
-
     val tomou: Boolean,
-
-
     @SerializedName("dia") val data: String,
-
     val horario: String,
-
     val descricao: String,
     val idUsuario: String
-) : Serializable // <-- Adicionei Serializable aqui para que o objeto possa ser passado via Intent
-
+) : Serializable
 
 data class ResultadoListaMedicamentos(
     @SerializedName("tipo") val tipo: String = "ResultadoListaMedicamentos",
-    @SerializedName("medicamentos") val medicamentos: List<Medicamento>? // <- Chave "medicamentos"
+    @SerializedName("medicamentos") val medicamentos: List<Medicamento>?
 ) : Comunicado()
-
 
 data class WrapperResposta(
     @SerializedName("operacao") val operacaoJsonString: String
@@ -156,9 +152,10 @@ data class WrapperResposta(
 
 suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamentos? {
 
-    val SERVER_IP = "10.0.2.2"
+    val SERVER_IP = "10.0.116.3"
+    //val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8 // Use UTF-8, mas mude para Charsets.ISO_8859_1 se o problema de acentos voltar.
+    val CODIFICACAO = Charsets.UTF_8
 
     val pedido = PedidoDeListarMedicamentos(userId)
     val gson = Gson()
@@ -167,28 +164,23 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
         var conexao: Socket? = null
         try {
 
-            conexao = Socket(SERVER_IP, SERVER_PORT) // 2. Inicializa a conexão
-
+            conexao = Socket(SERVER_IP, SERVER_PORT)
 
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
 
-            val servidor = Parceiro(conexao, receptor, transmissor) // 4. Inicializa o Parceiro
+            val servidor = Parceiro(conexao, receptor, transmissor)
 
-            servidor.receba(pedido) // Envia o pedido
-
+            servidor.receba(pedido)
 
             val respostaComunicado: Any? = servidor.envie()
-
 
             conexao.close()
             conexao = null
 
             if (respostaComunicado is ComunicadoJson) {
 
-
                 val wrapperJson = respostaComunicado.json
-
 
                 val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
 
@@ -209,24 +201,18 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
             e.printStackTrace()
             null
         } finally {
-            // Garante que a conexão seja fechada em caso de erro
             conexao?.close()
         }
     }
 }
 
-
-
 data class HistoricoMedicamento(
-    val id: Int,
+    val id: String,
     val nome: String,
     val tomou: Boolean,
     val data: String,
     val horario: String
 )
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -240,8 +226,6 @@ fun HomeCuidador(
     val pagerState = rememberPagerState(initialPage = initialTabIndex) { 2 }
     var selectedTabIndex by remember { mutableIntStateOf(initialTabIndex) }
     val scope = rememberCoroutineScope()
-
-
 
     val tabBarColor = Color(0xFFEEEEEE)
     val contentColor = Color.White
@@ -258,33 +242,65 @@ fun HomeCuidador(
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            // Se a tela retornar do estado Paused (ou seja, você voltou do RemédioCriarActivity)
             if (event == Lifecycle.Event.ON_RESUME) {
                 if (userId != null) {
-                    // Executa a busca de dados no servidor
                     scope.launch {
                         val resultado = performListarMedicamentos(userId)
                         if (resultado?.medicamentos != null) {
+
+                            // 1. Preparar formatador de data
+                            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale("pt", "BR"))
+                            val agora = java.util.Calendar.getInstance().time
+
+                            // 2. Limpar as listas visuais
                             medicamentosList.clear()
-                            medicamentosList.addAll(resultado.medicamentos)
-                            // A lista mutável faz o Compose redesenhar automaticamente
+                            historicoList.clear()
+
+                            // 3. Separar os remédios em duas listas
+                            // 'futuros' são os que ainda vão acontecer
+                            // 'passados' são os que já passaram do horário
+                            val (futuros, passados) = resultado.medicamentos.partition { remedio ->
+                                try {
+                                    val dataHoraRemedio = sdf.parse("${remedio.data} ${remedio.horario}")
+                                    // Retorna TRUE se for no futuro
+                                    dataHoraRemedio != null && dataHoraRemedio.after(agora)
+                                } catch (e: Exception) {
+                                    // Se a data estiver errada, joga pro histórico por segurança
+                                    false
+                                }
+                            }
+
+                            // 4. Preencher a lista da Aba 1 (Futuros) - Ordenados por data
+                            medicamentosList.addAll(futuros.sortedBy {
+                                try { sdf.parse("${it.data} ${it.horario}") } catch(e:Exception) { null }
+                            })
+
+                            // 5. Preencher a lista da Aba 2 (Histórico)
+                            passados.forEach { remedioPassado ->
+                                historicoList.add(
+                                    HistoricoMedicamento(
+                                        id = remedioPassado.id, // Agora ambos são String
+                                        nome = remedioPassado.nome,
+                                        tomou = remedioPassado.tomou,
+                                        data = remedioPassado.data,
+                                        horario = remedioPassado.horario
+                                    )
+                                )
+                            }
+
                         } else {
-                            // Opcional: Mostrar Toast de falha de recarga
+                            // Opcional: Toast de erro
                         }
                     }
                 }
             }
         }
 
-        // Adiciona o observador ao ciclo de vida
         lifecycleOwner.lifecycle.addObserver(observer)
-
-        // Limpeza (chamado quando o Composable é removido)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
-
     Scaffold(
         topBar = {
             Column {

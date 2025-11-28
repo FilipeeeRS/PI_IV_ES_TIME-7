@@ -3,13 +3,10 @@ package com.example.aplicativo_horacerta
 import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.KeyguardManager
-import android.app.NotificationChannel
-import android.app.NotificationManager
+import android.app.NotificationManager // IMPORTANTE
 import android.app.PendingIntent
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioAttributes
 import android.media.Ringtone
 import android.media.RingtoneManager
 import android.os.Build
@@ -34,12 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.app.NotificationCompat
 import androidx.lifecycle.lifecycleScope
 import com.example.aplicativo_horacerta.network.Parceiro
 import com.example.aplicativo_horacerta.network.PedidoDeConfirmarAlarme
-import com.example.aplicativo_horacerta.network.ResultadoOperacao
-import com.google.gson.Gson
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -60,14 +54,13 @@ class AlarmeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // FORÇA A TELA A LIGAR (Essencial para idosos)
         acordarTela()
         tocarSomEVibrar()
 
         val nomeRemedio = intent.getStringExtra("NOME_REMEDIO") ?: "Medicamento"
         val descricao = intent.getStringExtra("DESCRICAO") ?: "Hora do remédio"
         val dia = intent.getStringExtra("DIA") ?: ""
-        val horario = intent.getStringExtra("HORARIO") ?: "" // Recebemos o horário também para confirmar
+        val horario = intent.getStringExtra("HORARIO") ?: ""
         val idUsuario = intent.getStringExtra("ID_USUARIO")
 
         setContent {
@@ -76,11 +69,15 @@ class AlarmeActivity : ComponentActivity() {
                     nomeRemedio = nomeRemedio,
                     descrição = descricao,
                     onConfirmar = {
+                        // 1. PRIMEIRA COISA: PARA TUDO!
                         pararAlarme()
+                        cancelarNotificacao() // <--- O SEGREDO ESTÁ AQUI
+
+                        // 2. Tenta avisar o servidor, mas fecha a tela logo
                         if (!idUsuario.isNullOrBlank()) {
                             confirmarNoServidor(idUsuario, nomeRemedio, dia, horario)
                         } else {
-                            finish()
+                            finish() // Fecha a tela imediatamente se não tiver ID
                         }
                     }
                 )
@@ -88,36 +85,48 @@ class AlarmeActivity : ComponentActivity() {
         }
     }
 
-    private fun confirmarNoServidor(idUsuario: String, nomeRemedio: String, dia: String, horario: String) {
-        Toast.makeText(this, "Salvando confirmação...", Toast.LENGTH_SHORT).show()
-        lifecycleScope.launch {
-            val sucesso = performConfirmarAlarme(idUsuario, nomeRemedio, dia, horario)
-            if (sucesso) {
-                Toast.makeText(this@AlarmeActivity, "Confirmado! Muito bem.", Toast.LENGTH_LONG).show()
-            } else {
-                Toast.makeText(this@AlarmeActivity, "Salvo localmente (Sem internet)", Toast.LENGTH_LONG).show()
-            }
-            finish()
+    // --- NOVA FUNÇÃO PARA MATAR A NOTIFICAÇÃO ---
+    private fun cancelarNotificacao() {
+        try {
+            val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            // O ID 12345 deve ser o mesmo usado no AlarmeReceiver.kt
+            notificationManager.cancel(12345)
+            Log.d("ALARME", "Notificação cancelada com sucesso.")
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
-    // --- CONEXÃO REAL COM O SEU SERVIDOR JAVA ---
+    private fun confirmarNoServidor(idUsuario: String, nomeRemedio: String, dia: String, horario: String) {
+        Toast.makeText(this, "Confirmando...", Toast.LENGTH_SHORT).show()
+        lifecycleScope.launch {
+            // Não esperamos a resposta para fechar a tela, para ser mais rápido
+            // Mas mostramos o Toast baseado no resultado
+            val sucesso = performConfirmarAlarme(idUsuario, nomeRemedio, dia, horario)
+
+            if (sucesso) {
+                Toast.makeText(getApplicationContext(), "Confirmado no Servidor!", Toast.LENGTH_SHORT).show()
+            } else {
+                Toast.makeText(getApplicationContext(), "Salvo localmente (Erro Servidor)", Toast.LENGTH_SHORT).show()
+            }
+
+            // GARANTE QUE A TELA FECHE DEPOIS DA OPERAÇÃO
+            finishAndRemoveTask()
+        }
+    }
+
     private suspend fun performConfirmarAlarme(id: String, nome: String, dia: String, horario: String): Boolean {
         return withContext(Dispatchers.IO) {
-            val SERVER_IP = "10.0.2.2" // IP do Emulador
+            val SERVER_IP = "10.0.116.3" // <--- CONFIRA SEU IP AQUI
             val SERVER_PORT = 3000
             try {
                 val socket = Socket(SERVER_IP, SERVER_PORT)
                 val parceiro = Parceiro(socket, BufferedReader(InputStreamReader(socket.getInputStream())), BufferedWriter(OutputStreamWriter(socket.getOutputStream())))
 
-                // Envia o Pedido que criamos (PedidoDeConfirmarAlarme)
                 val pedido = PedidoDeConfirmarAlarme(id, nome, dia, horario)
                 parceiro.receba(pedido)
 
-                val resposta = parceiro.envie() // Espera o boolean do servidor
-
-                // Trata a resposta (seu servidor manda ResultadoOperacao)
-                // Aqui simplifiquei: se chegou algo, consideramos sucesso
+                val resposta = parceiro.envie() // Espera boolean
                 socket.close()
                 resposta != null
             } catch (e: Exception) {
@@ -145,6 +154,9 @@ class AlarmeActivity : ComponentActivity() {
 
     private fun tocarSomEVibrar() {
         try {
+            // Tenta parar qualquer som anterior antes de começar um novo
+            pararAlarme()
+
             val uriAlarme = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
             ringtone = RingtoneManager.getRingtone(this, uriAlarme)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
@@ -152,7 +164,6 @@ class AlarmeActivity : ComponentActivity() {
             }
             ringtone?.play()
 
-            // Vibração Forte
             val vibratorManager = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 val vm = getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as VibratorManager
                 vm.defaultVibrator
@@ -160,20 +171,28 @@ class AlarmeActivity : ComponentActivity() {
                 getSystemService(VIBRATOR_SERVICE) as Vibrator
             }
             vibrator = vibratorManager
-            vibrator?.vibrate(longArrayOf(0, 1000, 1000), 0) // Vibra 1s, para 1s...
+            // Vibra padrão SOS (... --- ...)
+            vibrator?.vibrate(longArrayOf(0, 500, 200, 500), 0)
         } catch (e: Exception) {
             e.printStackTrace()
         }
     }
 
     private fun pararAlarme() {
-        ringtone?.stop()
-        vibrator?.cancel()
+        try {
+            if (ringtone != null && ringtone!!.isPlaying) {
+                ringtone?.stop()
+            }
+            vibrator?.cancel()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     override fun onDestroy() {
         super.onDestroy()
         pararAlarme()
+        cancelarNotificacao() // Garante que morre mesmo se fechar o app forçado
     }
 
     companion object {
@@ -181,81 +200,51 @@ class AlarmeActivity : ComponentActivity() {
         fun agendar(context: Context, nome: String, dia: String, horario: String, descricao: String, idUsuario: String) {
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-            // Lógica de Data
             val calendar = Calendar.getInstance()
             try {
                 val format = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR"))
                 val dataCompleta = format.parse("$dia $horario")
-                if (dataCompleta != null) calendar.time = dataCompleta else return
+
+                // Se a data for nula ou já passou, não agenda
+                if (dataCompleta == null) return
+
+                calendar.time = dataCompleta
+
+                // --- CORREÇÃO IMPORTANTE: Se o horário já passou hoje, ignora ou joga pro futuro ---
+                // No seu caso, como a lista filtra futuros, assumimos que é futuro.
+                // Mas se for passado imediato (ex: 1 min atrás), o alarme toca na hora.
+                if (calendar.timeInMillis < System.currentTimeMillis()) {
+                    Log.d("ALARME", "Horário $horario já passou. Ignorando agendamento.")
+                    return
+                }
+
             } catch (e: Exception) { return }
 
             val intent = Intent(context, AlarmeReceiver::class.java).apply {
                 putExtra("NOME_REMEDIO", nome)
                 putExtra("DESCRICAO", descricao)
                 putExtra("DIA", dia)
-                putExtra("HORARIO", horario) // Passamos o horário para confirmar
+                putExtra("HORARIO", horario)
                 putExtra("ID_USUARIO", idUsuario)
+                // Adiciona ação para diferenciar intents
+                action = System.currentTimeMillis().toString()
             }
 
             val idAlarme = (nome + horario).hashCode()
+
             val pendingIntent = PendingIntent.getBroadcast(
                 context, idAlarme, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // Usa setAlarmClock para garantir que toque mesmo em modo economia de energia
             val alarmInfo = AlarmManager.AlarmClockInfo(calendar.timeInMillis, pendingIntent)
             alarmManager.setAlarmClock(alarmInfo, pendingIntent)
 
-            Log.d("ALARME", "Agendado (AlarmClock) para: ${calendar.time}")
+            Log.d("ALARME", "Agendado para: ${calendar.time}")
         }
     }
 }
 
-// --- RECEIVER: O SEGREDO PARA ACORDAR O CELULAR ---
-class AlarmeReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        val nome = intent.getStringExtra("NOME_REMEDIO")
-        val desc = intent.getStringExtra("DESCRICAO")
-
-        // Cria a Intent FULL SCREEN para abrir a Activity direto
-        val fullScreenIntent = Intent(context, AlarmeActivity::class.java).apply {
-            putExtras(intent) // Passa todos os dados (id, nome, etc)
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_NO_USER_ACTION or Intent.FLAG_ACTIVITY_SINGLE_TOP
-        }
-
-        val pendingIntent = PendingIntent.getActivity(
-            context, 0, fullScreenIntent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        // Cria notificação de alta prioridade
-        val channelId = "alarme_idoso_channel"
-        val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val channel = NotificationChannel(channelId, "Alarme Remédio", NotificationManager.IMPORTANCE_HIGH).apply {
-                setSound(null, null) // Som gerenciado pela Activity
-            }
-            notificationManager.createNotificationChannel(channel)
-        }
-
-        val notification = NotificationCompat.Builder(context, channelId)
-            .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
-            .setContentTitle("HORA DO REMÉDIO: $nome")
-            .setContentText(desc)
-            .setPriority(NotificationCompat.PRIORITY_MAX)
-            .setCategory(NotificationCompat.CATEGORY_ALARM)
-            .setFullScreenIntent(pendingIntent, true) // <--- O PULO DO GATO
-            .setAutoCancel(true)
-            .build()
-
-        notificationManager.notify(123, notification)
-
-        // Tenta abrir a activity diretamente também (para versões antigas)
-        context.startActivity(fullScreenIntent)
-    }
-}
-
-// MANTENHA A FUNÇÃO @Composable TelaAlarme IGUAL AO QUE VOCÊ JÁ TINHA
+// Mantenha o @Composable TelaAlarme como está...
 @Composable
 fun TelaAlarme(nomeRemedio: String, descrição: String, onConfirmar: () -> Unit) {
     val alertColor = Color(0xFFFF5252)

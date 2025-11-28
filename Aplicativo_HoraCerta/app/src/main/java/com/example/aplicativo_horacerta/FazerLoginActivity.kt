@@ -161,9 +161,7 @@ class FazerLoginActivity : ComponentActivity() {
         // 8. Inicializa o Firebase Auth
         auth = FirebaseAuth.getInstance()
 
-
         checkIfAlreadyLoggedIn()
-
 
         setContent {
             Surface(color = Color.Black) {
@@ -171,7 +169,7 @@ class FazerLoginActivity : ComponentActivity() {
                     onLoginAttempt = { email, senha ->
                         handleLogin(email, senha)
                     },
-                    onBackClick = { finish() } // Ações de navegação simples
+                    onBackClick = { finish() }
                 )
             }
         }
@@ -183,10 +181,12 @@ class FazerLoginActivity : ComponentActivity() {
 data class ComunicadoWrapper(
     val operacao: String
 )
+
 // Função suspensa para realizar o Login via Socket
 suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Unit) {
 
-    val SERVER_IP = "10.0.2.2"
+    val SERVER_IP = "10.0.116.3"
+    //val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
     val gson = Gson()
 
@@ -196,10 +196,7 @@ suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Un
         var servidor: Parceiro? = null
         try {
 
-
             val conexao = Socket(SERVER_IP, SERVER_PORT)
-
-
 
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8))

@@ -52,7 +52,8 @@ class CuidadorConectarIdosoActivity : ComponentActivity() {
 
 // Função 1: Apenas busca o nome
 suspend fun buscarIdosoViaSocket(email: String, onResult: (Boolean, String?) -> Unit) {
-    val SERVER_IP = "10.0.2.2"
+    val SERVER_IP = "10.0.116.3"
+    //val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
     val gson = Gson()
 

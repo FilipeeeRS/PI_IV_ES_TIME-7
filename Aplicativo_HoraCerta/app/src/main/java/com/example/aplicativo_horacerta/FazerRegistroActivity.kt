@@ -123,7 +123,8 @@ suspend fun createAccount(
     profileType: String,
     onResult: (String) -> Unit
 ) {
-    val SERVER_IP = "10.0.2.2"
+    val SERVER_IP = "10.0.116.3"
+    //val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
 
     val pedido = PedidoDeCadastro(nome, email, firebaseUid, profileType)
