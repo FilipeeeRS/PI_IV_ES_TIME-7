@@ -80,7 +80,6 @@ class HomeCuidadorActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // 1. LER OS DADOS DA INTENT
         val userUid = intent.getStringExtra(FazerLoginActivity.KEY_USER_UID)
         val profileType = intent.getStringExtra(FazerLoginActivity.KEY_PROFILE_TYPE)
 
@@ -91,10 +90,7 @@ class HomeCuidadorActivity : ComponentActivity() {
             finish()
             return
         }
-
-        // 2. USAR OS DADOS
         Toast.makeText(this, "Home do $profileType. UID: $userUid", Toast.LENGTH_SHORT).show()
-
         setContent {
             Surface(color = Color.Black) {
                 HomeCuidador(
@@ -103,14 +99,13 @@ class HomeCuidadorActivity : ComponentActivity() {
                         val intent = Intent(this, AcessibilidadeActivity::class.java)
                         startActivity(intent)
                     },
-                    // PASSA A FUNÇÃO DE LOGOUT
                     onLogoutClick = { performLogout() }
                 )
             }
         }
     }
 
-    // Opcional: Adicionar um botão de Logout que remove os dados
+    // fun logout
     fun performLogout() {
         // Remove a sessão do Firebase
         FirebaseAuth.getInstance().signOut()
@@ -124,14 +119,13 @@ class HomeCuidadorActivity : ComponentActivity() {
         // Adiciona flags para limpar o histórico de atividades
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
-        finish() // Fecha a Home
+        finish()
     }
 }
 
 
 
 data class Medicamento(
-    // CORREÇÃO 1: Mudar de Int para String
     val id: String,
     val nome: String,
     val tomou: Boolean,
@@ -163,31 +157,21 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
     return withContext(Dispatchers.IO) {
         var conexao: Socket? = null
         try {
-
             conexao = Socket(SERVER_IP, SERVER_PORT)
-
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
-
             val servidor = Parceiro(conexao, receptor, transmissor)
-
             servidor.receba(pedido)
-
             val respostaComunicado: Any? = servidor.envie()
 
             conexao.close()
             conexao = null
 
             if (respostaComunicado is ComunicadoJson) {
-
                 val wrapperJson = respostaComunicado.json
-
                 val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
-
                 val jsonStringAninhada = wrapper.operacaoJsonString
-
                 val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoListaMedicamentos::class.java)
-
                 Log.d("Network", "JSON Interno Final: $jsonStringAninhada")
                 return@withContext resultadoFinal
 
@@ -248,38 +232,34 @@ fun HomeCuidador(
                         val resultado = performListarMedicamentos(userId)
                         if (resultado?.medicamentos != null) {
 
-                            // 1. Preparar formatador de data
+                            // formatar data
                             val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale("pt", "BR"))
                             val agora = java.util.Calendar.getInstance().time
 
-                            // 2. Limpar as listas visuais
+                            // Limpar lista
                             medicamentosList.clear()
                             historicoList.clear()
 
-                            // 3. Separar os remédios em duas listas
-                            // 'futuros' são os que ainda vão acontecer
-                            // 'passados' são os que já passaram do horário
+                            // Separar em (futuros e passados)
                             val (futuros, passados) = resultado.medicamentos.partition { remedio ->
                                 try {
                                     val dataHoraRemedio = sdf.parse("${remedio.data} ${remedio.horario}")
-                                    // Retorna TRUE se for no futuro
                                     dataHoraRemedio != null && dataHoraRemedio.after(agora)
                                 } catch (e: Exception) {
-                                    // Se a data estiver errada, joga pro histórico por segurança
                                     false
                                 }
                             }
 
-                            // 4. Preencher a lista da Aba 1 (Futuros) - Ordenados por data
+                            // Preencher lista de medicamentos, ordenar por data
                             medicamentosList.addAll(futuros.sortedBy {
                                 try { sdf.parse("${it.data} ${it.horario}") } catch(e:Exception) { null }
                             })
 
-                            // 5. Preencher a lista da Aba 2 (Histórico)
+                            // Preencher lista do Histórico
                             passados.forEach { remedioPassado ->
                                 historicoList.add(
                                     HistoricoMedicamento(
-                                        id = remedioPassado.id, // Agora ambos são String
+                                        id = remedioPassado.id,
                                         nome = remedioPassado.nome,
                                         tomou = remedioPassado.tomou,
                                         data = remedioPassado.data,
@@ -334,9 +314,8 @@ fun HomeCuidador(
                             color = Color.White,
                             fontSize = 30.sp,
                             fontWeight = FontWeight.Bold,
-                            modifier = Modifier.weight(1f) // Adiciona peso para empurrar o botão para a direita
+                            modifier = Modifier.weight(1f)
                         )
-
 
                         IconButton(
                             onClick = onLogoutClick,
@@ -358,6 +337,7 @@ fun HomeCuidador(
                     contentColor = Color.Black,
                     indicator = { tabPositions ->
                         val currentTabPosition = tabPositions[selectedTabIndex]
+
                         Box(
                             Modifier
                                 .fillMaxWidth()
@@ -394,7 +374,6 @@ fun HomeCuidador(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.Bottom
             ) {
-                // Botão Acessibilidade
                 IconButton(
                     onClick = onAccessibilityClick,
                     modifier = Modifier.size(56.dp)
@@ -406,12 +385,9 @@ fun HomeCuidador(
                         tint = Color.Black
                     )
                 }
-
                 IconButton(
                     onClick = {
                         val intent = Intent(context, CuidadorConectarIdosoActivity::class.java)
-
-
                         context.startActivity(intent)
                     },
                     modifier = Modifier.size(56.dp)
@@ -425,6 +401,7 @@ fun HomeCuidador(
                 }
             }
         },
+
         floatingActionButtonPosition = FabPosition.Center
 
     ) { paddingValues ->
@@ -465,26 +442,21 @@ fun HomeCuidador(
     }
 }
 
-
 data class ResultadoOperacao(
     @SerializedName("tipo")
     val tipo: String,
 
-    @SerializedName("sucesso") // OK: Mapeia o campo 'sucesso' do servidor
+    @SerializedName("sucesso")
     val isSucesso: Boolean,
 
     @SerializedName("mensagem")
     val mensagem: String? = null
-) : Comunicado() // OK
-
-
-
+) : Comunicado()
 
 // Função de rede para deletar medicamento
-
 suspend fun performDeleteMedicamento(
     idMedicamento: String,
-    idUsuario: String? // userId do Cuidador
+    idUsuario: String?
 ): ResultadoOperacao? {
 
     val SERVER_IP = "10.0.2.2"
@@ -497,23 +469,20 @@ suspend fun performDeleteMedicamento(
     return withContext(Dispatchers.IO) {
         var conexao: Socket? = null
         try {
-            // 1. Inicializa a conexão
+            // Inicializa a conexão
             conexao = Socket(SERVER_IP, SERVER_PORT)
 
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
             val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
             val servidor = Parceiro(conexao, receptor, transmissor)
 
-            // 2. Envia o pedido
+            // Envia pedido
             servidor.receba(pedido)
             // FORÇA O ENVIO DO PEDIDO ANTES DE TENTAR LER A RESPOSTA
             transmissor.flush()
 
-            // 3. Aguarda e recebe a resposta do servidor (ComunicadoJson)
-            val respostaComunicado: Any? = servidor.envie() // LÊ A RESPOSTA AQUI!
-
-            // ******* REMOVER QUALQUER conexao.close() NESTE BLOCO *******
-            // ******* O FECHAMENTO VAI PARA O FINALLY *******
+            // Aguarda e recebe a resposta do servidor (ComunicadoJson)
+            val respostaComunicado: Any? = servidor.envie() // Lê resposta
 
             if (respostaComunicado == null) {
                 Log.e("DeleteNetwork", "Erro: Resposta do servidor é NULL.")
@@ -525,7 +494,7 @@ suspend fun performDeleteMedicamento(
                 val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
                 val jsonStringAninhada = wrapper.operacaoJsonString
 
-                // 4. Desserializa o resultado final
+                // Desserializa o resultado final
                 val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoOperacao::class.java)
 
                 Log.d("DeleteNetwork", "Resultado Final (isSucesso): ${resultadoFinal.isSucesso}")
@@ -538,10 +507,8 @@ suspend fun performDeleteMedicamento(
 
         } catch (e: Exception) {
             Log.e("DeleteNetwork", "Erro GERAL de rede ou desserialização:", e)
-            // Não fechar aqui, pois o finally cuidará disso.
             return@withContext ResultadoOperacao(tipo = "ErroComunicação", isSucesso = false, mensagem = "Erro de comunicação: ${e.message}")
         } finally {
-            // 5. GARANTE O FECHAMENTO APENAS NO FINAL, DEPOIS QUE O CLIENTE LEU A RESPOSTA
             conexao?.close()
         }
     }
@@ -564,15 +531,8 @@ fun MedicamentosTab(
     ) {
         TextButton(
             onClick = {
-
-                // 2. Crie a Intent: Use a classe correta
                 val intent = Intent(context, RemédioCriarActivity::class.java)
-
-                // 3. PASSE O USER ID (Corrigindo o erro de IDE inválido)
-                // Corrigindo o erro "Unresolved reference KEY_USER_ID" e o erro de runtime "ide inválido"
                 intent.putExtra(KEY_USER_UID, userId)
-
-                // 4. Inicie a Activity
                 context.startActivity(intent)
             },
             modifier = Modifier.padding(vertical = 8.dp)
@@ -597,25 +557,15 @@ fun MedicamentosTab(
                         medicamentoParaDeletar = medicamento
                         showDeleteDialog = true
                     },
-                    // CORREÇÃO APLICADA AQUI:
-                    // 1. Passa o objeto Medicamento completo ("DADOS_MEDICAMENTO").
-                    // 2. Mantém a passagem do ID do Usuário Logado (KEY_USER_UID).
                     onEditClick = {
                         val intent = Intent(context, RemédioEditarActivity::class.java)
-
-                        // 1. PASSANDO O OBJETO MEDICAMENTO COMPLETO
                         intent.putExtra("DADOS_MEDICAMENTO", medicamento as Serializable)
-
-                        // 2. PASSANDO O ID DO USUÁRIO
                         intent.putExtra(KEY_USER_UID, userId)
-
                         context.startActivity(intent)
                     }
                 )
             }
         }
-
-
     }
 
     if (showDeleteDialog && medicamentoParaDeletar != null) {
@@ -673,8 +623,7 @@ fun DeleteConfirmationDialog(
 fun MedicamentoItem(
     medicamento: Medicamento,
     onDeleteClick: () -> Unit,
-    // Adicionar o novo callback para edição
-    onEditClick: () -> Unit // <-- NOVO PARAMETRO
+    onEditClick: () -> Unit
 ) {
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -695,11 +644,9 @@ fun MedicamentoItem(
                 Text(text = "Dia: ${medicamento.data}", fontSize = 14.sp, color = Color.Gray)
                 Text(text = "Horário: ${medicamento.horario}", fontSize = 14.sp, color = Color.Gray)
             }
-            // Habilita o botão de Editar
             IconButton(onClick = onEditClick) {
                 Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.size(28.dp))
             }
-            // Botão Deletar
             IconButton(onClick = onDeleteClick) {
                 Icon(Icons.Filled.Delete, contentDescription = "Deletar", tint = Color.Gray, modifier = Modifier.size(28.dp))
             }
@@ -708,15 +655,13 @@ fun MedicamentoItem(
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-// Mude a função para aceitar a lista
 @Composable
 fun HistoricoTab(historicoList: List<HistoricoMedicamento>) {
 
     // Se a lista estiver vazia, você pode mostrar uma mensagem
     if (historicoList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Text("Nenhum histórico encontrado.", color = Color.Gray)
+            Text("Nenhum remédio no histórico.", color = Color.Gray)
         }
     }
 
@@ -726,12 +671,12 @@ fun HistoricoTab(historicoList: List<HistoricoMedicamento>) {
             .padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        // Itera sobre a lista passada
         items(historicoList) { historicoItem ->
             HistoricoItem(historico = historicoItem)
         }
     }
 }
+
 @Composable
 fun HistoricoItem(historico: HistoricoMedicamento) {
     val statusText = if (historico.tomou) "Status: Tomou" else "Status: Não Tomou"

@@ -69,7 +69,6 @@ class RemédioCriarActivity : ComponentActivity() {
                             performCriarMedicamento(nome, dia, horario, descricao, idUsuarioLogado) { resultado ->
                                 Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
 
-                                // --- MUDANÇA: AGENDAR ALARME ---
                                 if (!resultado.contains("Erro", ignoreCase = true) && idUsuarioLogado != null) {
                                     AlarmeActivity.agendar(
                                         context = this@RemédioCriarActivity,
@@ -79,7 +78,7 @@ class RemédioCriarActivity : ComponentActivity() {
                                         descricao = descricao,
                                         idUsuario = idUsuarioLogado
                                     )
-                                    finish() // Fecha tela só se der certo
+                                    finish()
                                 }
                             }
                         }
@@ -200,6 +199,7 @@ fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, S
         }
     }
 }
+
 @Preview(showSystemUi = true)
 @Composable
 fun PreviewRemédioCriarScreen() {

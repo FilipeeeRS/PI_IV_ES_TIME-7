@@ -96,9 +96,6 @@ class RemédioEditarActivity : ComponentActivity() {
 
                             if (resultado?.isSucesso == true) {
                                 Toast.makeText(this@RemédioEditarActivity, "Medicamento editado!", Toast.LENGTH_SHORT).show()
-
-                                // --- MUDANÇA: REAGENDAR ALARME ---
-                                // Se mudou dia ou horário, ou apenas para garantir, reagendamos
                                 AlarmeActivity.agendar(
                                     context = this@RemédioEditarActivity,
                                     nome = nome,
@@ -107,8 +104,8 @@ class RemédioEditarActivity : ComponentActivity() {
                                     descricao = descricao,
                                     idUsuario = idUsuarioLogado
                                 )
-
                                 finish()
+
                             } else {
                                 Toast.makeText(this@RemédioEditarActivity, "Falha: ${resultado?.mensagem}", Toast.LENGTH_LONG).show()
                             }
@@ -120,12 +117,7 @@ class RemédioEditarActivity : ComponentActivity() {
     }
 }
 
-// ... (Mantenha sua função performEditMedicamento exatamente como está no seu código original) ...
-// Para economizar espaço aqui, vou pular a cópia dela pois ela não mudou.
-// Use a que você já tem no código do seu amigo!
-suspend fun performEditMedicamento(
-    idMedicamento: String, nome: String, dia: String, horario: String, descricao: String, idUsuario: String?
-): ResultadoOperacao? {
+suspend fun performEditMedicamento(idMedicamento: String, nome: String, dia: String, horario: String, descricao: String, idUsuario: String?): ResultadoOperacao? {
     val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
     val CODIFICACAO = Charsets.UTF_8
@@ -161,7 +153,6 @@ suspend fun performEditMedicamento(
     }
 }
 
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemédioEditarScreen(
@@ -178,13 +169,11 @@ fun RemédioEditarScreen(
     val titleBarColor = Color(0xFFEEEEEE)
     val fieldBackgroundColor = Color(0xFFF0F0F0)
 
-    // --- CORREÇÃO DO DATE PICKER ---
     val datePickerDialog = DatePickerDialog(
         context,
         { _: DatePicker, y: Int, m: Int, d: Int ->
             val cal = Calendar.getInstance()
             cal.set(y, m, d)
-            // IMPORTANTE: Mudado para dd/MM/yyyy para ser compatível com o Alarme e Backend
             val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
             dia = dateFormat.format(cal.time)
         },

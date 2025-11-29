@@ -3,7 +3,7 @@ package com.example.aplicativo_horacerta
 import android.annotation.SuppressLint
 import android.app.AlarmManager
 import android.app.KeyguardManager
-import android.app.NotificationManager // IMPORTANTE
+import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -69,15 +69,15 @@ class AlarmeActivity : ComponentActivity() {
                     nomeRemedio = nomeRemedio,
                     descrição = descricao,
                     onConfirmar = {
-                        // 1. PRIMEIRA COISA: PARA TUDO!
+                        // "Para tudo"
                         pararAlarme()
-                        cancelarNotificacao() // <--- O SEGREDO ESTÁ AQUI
+                        cancelarNotificacao()
 
-                        // 2. Tenta avisar o servidor, mas fecha a tela logo
+                        // Avisa servidor
                         if (!idUsuario.isNullOrBlank()) {
                             confirmarNoServidor(idUsuario, nomeRemedio, dia, horario)
                         } else {
-                            finish() // Fecha a tela imediatamente se não tiver ID
+                            finish()
                         }
                     }
                 )
@@ -85,11 +85,9 @@ class AlarmeActivity : ComponentActivity() {
         }
     }
 
-    // --- NOVA FUNÇÃO PARA MATAR A NOTIFICAÇÃO ---
     private fun cancelarNotificacao() {
         try {
             val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-            // O ID 12345 deve ser o mesmo usado no AlarmeReceiver.kt
             notificationManager.cancel(12345)
             Log.d("ALARME", "Notificação cancelada com sucesso.")
         } catch (e: Exception) {
@@ -100,8 +98,7 @@ class AlarmeActivity : ComponentActivity() {
     private fun confirmarNoServidor(idUsuario: String, nomeRemedio: String, dia: String, horario: String) {
         Toast.makeText(this, "Confirmando...", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
-            // Não esperamos a resposta para fechar a tela, para ser mais rápido
-            // Mas mostramos o Toast baseado no resultado
+
             val sucesso = performConfirmarAlarme(idUsuario, nomeRemedio, dia, horario)
 
             if (sucesso) {
@@ -109,16 +106,16 @@ class AlarmeActivity : ComponentActivity() {
             } else {
                 Toast.makeText(getApplicationContext(), "Salvo localmente (Erro Servidor)", Toast.LENGTH_SHORT).show()
             }
-
-            // GARANTE QUE A TELA FECHE DEPOIS DA OPERAÇÃO
             finishAndRemoveTask()
         }
     }
 
     private suspend fun performConfirmarAlarme(id: String, nome: String, dia: String, horario: String): Boolean {
         return withContext(Dispatchers.IO) {
-            val SERVER_IP = "10.0.116.3" // <--- CONFIRA SEU IP AQUI
+
+            val SERVER_IP = "10.0.116.3"
             val SERVER_PORT = 3000
+
             try {
                 val socket = Socket(SERVER_IP, SERVER_PORT)
                 val parceiro = Parceiro(socket, BufferedReader(InputStreamReader(socket.getInputStream())), BufferedWriter(OutputStreamWriter(socket.getOutputStream())))
@@ -126,7 +123,7 @@ class AlarmeActivity : ComponentActivity() {
                 val pedido = PedidoDeConfirmarAlarme(id, nome, dia, horario)
                 parceiro.receba(pedido)
 
-                val resposta = parceiro.envie() // Espera boolean
+                val resposta = parceiro.envie()
                 socket.close()
                 resposta != null
             } catch (e: Exception) {
@@ -154,7 +151,6 @@ class AlarmeActivity : ComponentActivity() {
 
     private fun tocarSomEVibrar() {
         try {
-            // Tenta parar qualquer som anterior antes de começar um novo
             pararAlarme()
 
             val uriAlarme = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_ALARM)
@@ -171,7 +167,6 @@ class AlarmeActivity : ComponentActivity() {
                 getSystemService(VIBRATOR_SERVICE) as Vibrator
             }
             vibrator = vibratorManager
-            // Vibra padrão SOS (... --- ...)
             vibrator?.vibrate(longArrayOf(0, 500, 200, 500), 0)
         } catch (e: Exception) {
             e.printStackTrace()
@@ -192,7 +187,7 @@ class AlarmeActivity : ComponentActivity() {
     override fun onDestroy() {
         super.onDestroy()
         pararAlarme()
-        cancelarNotificacao() // Garante que morre mesmo se fechar o app forçado
+        cancelarNotificacao()
     }
 
     companion object {
@@ -210,9 +205,7 @@ class AlarmeActivity : ComponentActivity() {
 
                 calendar.time = dataCompleta
 
-                // --- CORREÇÃO IMPORTANTE: Se o horário já passou hoje, ignora ou joga pro futuro ---
-                // No seu caso, como a lista filtra futuros, assumimos que é futuro.
-                // Mas se for passado imediato (ex: 1 min atrás), o alarme toca na hora.
+                // Se o horário já passou hoje, ignora ou joga pro futuro
                 if (calendar.timeInMillis < System.currentTimeMillis()) {
                     Log.d("ALARME", "Horário $horario já passou. Ignorando agendamento.")
                     return
@@ -244,7 +237,6 @@ class AlarmeActivity : ComponentActivity() {
     }
 }
 
-// Mantenha o @Composable TelaAlarme como está...
 @Composable
 fun TelaAlarme(nomeRemedio: String, descrição: String, onConfirmar: () -> Unit) {
     val alertColor = Color(0xFFFF5252)

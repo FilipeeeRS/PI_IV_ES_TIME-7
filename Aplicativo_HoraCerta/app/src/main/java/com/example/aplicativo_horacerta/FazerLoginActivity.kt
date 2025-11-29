@@ -54,18 +54,17 @@ class FazerLoginActivity : ComponentActivity() {
         const val KEY_PROFILE_TYPE = "PROFILE_TYPE"
     }
 
-    /** Verifica se há uma sessão Firebase e dados de perfil salvos no SharedPreferences. */
+    // Verifica se há uma sessão salvos no SharedPreferences
     private fun checkIfAlreadyLoggedIn() {
         val currentUser = auth.currentUser
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
-        // Verifica se o Firebase tem um usuário logado E se salvamos o tipo de perfil
+        // Verifica se o Firebase tem um usuário salvo
         if (currentUser != null && prefs.contains(KEY_PROFILE_TYPE)) {
-
             val uid = prefs.getString(KEY_USER_UID, null)
             val profileType = prefs.getString(KEY_PROFILE_TYPE, null)
 
-            // Redireciona imediatamente se os dados essenciais estiverem presentes
+            // Redireciona se os dados estiverem presentes
             if (uid != null && profileType != null) {
                 Toast.makeText(this, "Sessão restaurada. Bem-vindo(a) de volta.", Toast.LENGTH_SHORT).show()
 
@@ -74,7 +73,6 @@ class FazerLoginActivity : ComponentActivity() {
         }
     }
 
-    /** Encapsula a lógica de navegação condicional. */
     private fun navigateToHome(uid: String, profileType: String) {
         val nextActivity = when (profileType) {
             "Cuidador" -> HomeCuidadorActivity::class.java
@@ -86,11 +84,10 @@ class FazerLoginActivity : ComponentActivity() {
         }
 
         val intent = Intent(this, nextActivity)
-        // Passa os dados para a próxima Activity
         intent.putExtra(KEY_USER_UID, uid)
         intent.putExtra(KEY_PROFILE_TYPE, profileType)
         startActivity(intent)
-        finish() // Fecha a Activity de Login para que o usuário não possa voltar
+        finish()
     }
 
     private fun handleLogin(email: String, senha: String) {
@@ -111,7 +108,7 @@ class FazerLoginActivity : ComponentActivity() {
                                 val context = this@FazerLoginActivity
 
                                 if (result.startsWith("SUCESSO")) {
-                                    // 4. Extração de Dados do Servidor: SUCESSO:UID:Tipo
+                                    // Extração de dados do servidor
                                     val parts = result.split(":")
                                     if (parts.size >= 3) {
                                         val uid = parts[1]
@@ -122,19 +119,15 @@ class FazerLoginActivity : ComponentActivity() {
                                         prefs.edit().apply {
                                             putString(KEY_USER_UID, uid)
                                             putString(KEY_PROFILE_TYPE, profileType)
-                                            apply() // Aplica a mudança
+                                            apply()
                                         }
-
                                         Toast.makeText(context, "Login OK. Perfil: $profileType", Toast.LENGTH_LONG).show()
-
-
                                         navigateToHome(uid, profileType)
 
                                     } else {
                                         Toast.makeText(context, "Erro: Resposta do servidor incompleta.", Toast.LENGTH_LONG).show()
                                     }
                                 } else {
-                                    // ... (Tratamento de Falha de Rede/Servidor) ...
                                     val errorMessage = when {
                                         result.startsWith("FALHA:") -> "Servidor: " + result.substringAfter("FALHA:").trim()
                                         result.startsWith("ERRO_CONEXAO:") -> "Falha na conexão com o servidor. Tente novamente."
@@ -148,21 +141,15 @@ class FazerLoginActivity : ComponentActivity() {
                         Toast.makeText(this, "Erro Firebase: UID não disponível.", Toast.LENGTH_LONG).show()
                     }
                 } else {
-                    // 7. TRATAMENTO DE FALHA DE AUTENTICAÇÃO FIREBASE (Email/Senha Inválidos)
                     Toast.makeText(this, "Falha no Login: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                 }
             }
     }
 
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // 8. Inicializa o Firebase Auth
         auth = FirebaseAuth.getInstance()
-
         checkIfAlreadyLoggedIn()
-
         setContent {
             Surface(color = Color.Black) {
                 FazerLogin(
@@ -176,13 +163,12 @@ class FazerLoginActivity : ComponentActivity() {
     }
 }
 
-
 // Crie esta Data Class para mapear o JSON externo
 data class ComunicadoWrapper(
     val operacao: String
 )
 
-// Função suspensa para realizar o Login via Socket
+// Função  para fazer login pelo Socket
 suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Unit) {
 
     val SERVER_IP = "10.0.116.3"
@@ -195,7 +181,6 @@ suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Un
     withContext(Dispatchers.IO) {
         var servidor: Parceiro? = null
         try {
-
             val conexao = Socket(SERVER_IP, SERVER_PORT)
 
             val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
@@ -205,17 +190,12 @@ suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Un
 
             servidor.receba(pedido)
 
-
             val resposta = servidor.envie()
             val jsonBruto = resposta?.toString() ?: ""
-
-
-
 
             val wrapper = gson.fromJson(jsonBruto, ComunicadoWrapper::class.java)
 
             val jsonInterno = wrapper.operacao
-
 
             val resultadoLogin = gson.fromJson(jsonInterno, ResultadoLogin::class.java)
 
@@ -226,8 +206,6 @@ suspend fun doLogin(email: String, firebaseUid: String, onResult: (String) -> Un
             } else {
                 "FALHA:Login rejeitado pelo servidor. Mensagem: ${resultadoLogin.getMensagem()}"
             }
-
-
 
             withContext(Dispatchers.Main) {
                 onResult(result)
@@ -262,7 +240,6 @@ fun FazerLogin(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Fundo
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -270,7 +247,6 @@ fun FazerLogin(
             contentScale = ContentScale.Crop
         )
 
-        // Botão de Voltar
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
@@ -294,7 +270,6 @@ fun FazerLogin(
 
             Spacer(modifier = Modifier.height(100.dp))
 
-            // Logo
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo HoraCerta",
@@ -303,7 +278,6 @@ fun FazerLogin(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Texto central
             Text(
                 text = "HoraCerta\nFazer Login",
                 color = Color.White,
@@ -314,7 +288,6 @@ fun FazerLogin(
 
             Spacer(modifier = Modifier.height(50.dp))
 
-            // Campo de Email
             TextField(
                 value = email,
                 onValueChange = { email = it },
@@ -335,7 +308,6 @@ fun FazerLogin(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Senha
             TextField(
                 value = password,
                 onValueChange = { password = it },
@@ -363,8 +335,8 @@ fun FazerLogin(
                 ),
                 modifier = Modifier.fillMaxWidth()
             )
-            /*
-            // Mensagem de erro
+
+            /*Mensagem de erro
             if (onLoginAttempt != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(
@@ -372,12 +344,10 @@ fun FazerLogin(
                     color = Color.Red,
                     fontSize = 14.sp
                 )
-            }
+            }*/
 
-             */
             Spacer(modifier = Modifier.height(50.dp))
 
-            // Botão de Confirmar
             Button(
                 onClick = {
                     var isValid = true
@@ -414,13 +384,11 @@ fun FazerLogin(
         }
     }
 }
-/*
-@Preview(showSystemUi = true, showBackground = true)
+
+/*@Preview(showSystemUi = true, showBackground = true)
 @Composable
 fun PreviewFazerLogin() {
     Surface(color = Color.Black) {
         FazerLogin(loginMessage = "Email ou senha incorretos.", onBackClick = {})
     }
-}
-
- */
+}*/

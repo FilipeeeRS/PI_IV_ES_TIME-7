@@ -27,12 +27,10 @@ class InicioTelaActivity : ComponentActivity() {
             Surface(color = Color.Black) {
                 InicioTela(
                     onLoginClick = {
-                        // Ação: inicia FazerLoginActivity
                         val intent = Intent(this, FazerLoginActivity::class.java)
                         startActivity(intent)
                     },
                     onRegisterClick = {
-                        // Ação: inicia FazerRegistroActivity
                         val intent = Intent(this, FazerRegistroActivity::class.java)
                         startActivity(intent)
                     }
@@ -50,7 +48,6 @@ fun InicioTela(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-        // Fundo
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -67,7 +64,6 @@ fun InicioTela(
 
             Spacer(modifier = Modifier.height(100.dp))
 
-            // Logo
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo HoraCerta",
@@ -76,7 +72,6 @@ fun InicioTela(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Texto principal
             Text(
                 text = "HoraCerta\nSeja Bem-vindo",
                 color = Color.White,

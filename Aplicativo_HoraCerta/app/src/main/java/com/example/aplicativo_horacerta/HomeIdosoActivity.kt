@@ -47,7 +47,6 @@ class HomeIdosoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            // Fundo geral preto para destacar o conteúdo (igual ao padrão do app)
             Surface(color = Color.Black) {
                 HomeIdosoScreen(
                     onLogoutClick = {
@@ -63,9 +62,8 @@ class HomeIdosoActivity : ComponentActivity() {
     }
 }
 
-// --- FUNÇÕES DE LÓGICA (MANTIDAS IGUAIS) ---
 suspend fun buscarDadosCuidador(): Pair<String, String>? {
-    val SERVER_IP = "10.0.116.3" // Mantenha seu IP atualizado
+    val SERVER_IP = "10.0.116.3"
     val SERVER_PORT = 3000
     val gson = Gson()
     val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return null
@@ -112,7 +110,6 @@ suspend fun sincronizarRemediosEAgendar(context: Context, uidCuidador: String) {
     }
 }
 
-// --- COMPOSABLE ATUALIZADO (VISUAL NOVO) ---
 @Composable
 fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     val context = LocalContext.current
@@ -122,7 +119,7 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     var nomeCuidador by remember { mutableStateOf("Buscando...") }
     val listaRemediosFuturos = remember { mutableStateListOf<Medicamento>() }
 
-    // Função que carrega e filtra (mantida da versão anterior para funcionar a fila)
+    // Função que carrega e filtra
     fun carregarDados() {
         scope.launch {
             val dadosCuidador = buscarDadosCuidador()
@@ -167,14 +164,12 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
 
     Scaffold(
         topBar = {
-            // --- AQUI ESTÁ A MUDANÇA VISUAL (Baseada na HomeCuidador) ---
             Column {
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(130.dp)
                 ) {
-                    // Imagem de Fundo
                     Image(
                         painter = painterResource(id = R.drawable.ic_launcher_background),
                         contentDescription = "Fundo do Cabeçalho",
@@ -182,14 +177,13 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
                         contentScale = ContentScale.Crop
                     )
 
-                    // Conteúdo do Cabeçalho
                     Row(
                         modifier = Modifier
                             .fillMaxSize()
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        // Ícone Grande (Igual HomeCuidador)
+
                         Icon(
                             painter = painterResource(id = R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo",
@@ -199,7 +193,6 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
 
                         Spacer(modifier = Modifier.width(16.dp))
 
-                        // Coluna de Texto (Título e Nome do Cuidador)
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
                                 text = "IDOSO",
@@ -209,14 +202,13 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
                             )
                             Text(
                                 text = "Cuidador: $nomeCuidador",
-                                color = Color.White.copy(alpha = 0.9f), // Leve transparência
+                                color = Color.White.copy(alpha = 0.9f),
                                 fontSize = 14.sp,
                                 maxLines = 1,
                                 overflow = TextOverflow.Ellipsis
                             )
                         }
 
-                        // Botão Sair
                         IconButton(
                             onClick = onLogoutClick,
                             modifier = Modifier.align(Alignment.CenterVertically)
@@ -230,11 +222,9 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
                         }
                     }
                 }
-                // (Não coloquei TabRow aqui pois idoso só tem uma função principal)
             }
         }
     ) { paddingValues ->
-        // CORPO DA TELA
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -262,7 +252,6 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     }
 }
 
-// Mantive o card igual, pois combina com o estilo clean
 @Composable
 fun CardProximoRemedio(nome: String, horario: String, dia: String) {
     Card(
