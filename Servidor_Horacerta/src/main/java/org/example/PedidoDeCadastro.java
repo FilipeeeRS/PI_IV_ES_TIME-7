@@ -64,7 +64,6 @@ public class PedidoDeCadastro extends ComunicadoJson {
                     return false;
                 }
 
-
                 Document doc = new Document("firebase_uid", this.firebaseUid)
                         .append("nome", nome)
                         .append("email", email)

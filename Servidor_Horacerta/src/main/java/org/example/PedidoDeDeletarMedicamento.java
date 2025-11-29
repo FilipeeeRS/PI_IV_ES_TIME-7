@@ -31,7 +31,7 @@ public class PedidoDeDeletarMedicamento extends ComunicadoJson {
 
                 ObjectId objectId = new ObjectId(this.id);
 
-                // FILTRO DE SEGURANÇA
+                // Filtro de segurança
                 DeleteResult result = collection.deleteOne(
                         and(
                                 eq("_id", objectId),
@@ -44,21 +44,17 @@ public class PedidoDeDeletarMedicamento extends ComunicadoJson {
                 System.out.println("[MEDICAMENTO] Tentativa de delete. ID: " + this.id + ". Deletados: " + count);
 
                 if (count == 1) {
-                    // SUCESSO!
                     return new ResultadoOperacao(true, "Medicamento deletado com sucesso.").getSucesso();
                 } else {
-                    // FALHA (Nenhum documento deletado - ID não encontrado ou não pertence ao usuário)
                     return new ResultadoOperacao(false, "Falha ao deletar: Medicamento não encontrado ou permissão negada.").getSucesso();
                 }
 
             } catch (com.mongodb.MongoException e) {
                 System.err.println("Erro ao interagir com o MongoDB durante deleção: " + e.getMessage());
-                // FALHA: Erro de banco
                 return new ResultadoOperacao(false, "Erro interno do servidor (MongoDB): " + e.getMessage()).getSucesso();
             }
         } catch (Exception e) {
             e.printStackTrace();
-            // FALHA: Erro geral
             return new ResultadoOperacao(false, "Erro interno inesperado: " + e.getMessage()).getSucesso();
         }
     }

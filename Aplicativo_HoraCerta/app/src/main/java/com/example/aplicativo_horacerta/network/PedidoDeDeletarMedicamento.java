@@ -5,21 +5,17 @@ import com.google.gson.annotations.SerializedName;
 
 import java.io.Serializable;
 
-/**
- * Classe para representar o pedido de exclusão de um medicamento.
- * Herda de ComunicadoJson para incluir o campo de operação.
- */
+// Classe para representar o pedido de exclusão de um medicamento
+// Herda de ComunicadoJson para incluir o campo de operação
 public class PedidoDeDeletarMedicamento extends ComunicadoJson implements Serializable {
-
-   
 
         private static final long serialVersionUID = 1L;
 
-        // Campo com o ID do Remédio (o _id do Mongo)
+        // Campo com o ID do Remédio
         @SerializedName("id")
         private String idMedicamento;
 
-        // Campo com o ID do Usuário (filtro de segurança no servidor)
+        // Campo com o ID do Usuário
         @SerializedName("idUsuario")
         private String idUsuario;
 
@@ -40,8 +36,7 @@ public class PedidoDeDeletarMedicamento extends ComunicadoJson implements Serial
                 this.idUsuario = idUsuario;
         }
 
-        // --- Getters ---
-
+        // Getters
         public String getIdMedicamento() {
                 return idMedicamento;
         }

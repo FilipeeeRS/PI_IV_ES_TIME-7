@@ -8,9 +8,6 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
 
-
-
-
 public class PedidoDeCriarMedicamento extends ComunicadoJson {
     @SerializedName("nome")
     private String nome;
@@ -60,16 +57,13 @@ public class PedidoDeCriarMedicamento extends ComunicadoJson {
                 System.out.println("[MEDICAMENTO] Criado com sucesso para usuario: " + this.idUsuario);
                 return true;
             } catch (com.mongodb.MongoException e) {
-                // Captura erros específicos do MongoDB (conexão, permissão, etc.)
                 System.err.println("Erro ao interagir com o MongoDB: " + e.getMessage());
                 return false;
             }
         } catch (IllegalArgumentException e) {
-            // Captura o erro de validação (campos ausentes)
             System.err.println("Erro de Validação: " + e.getMessage());
             return false;
         } catch (Exception e) {
-            // Captura qualquer outra exceção inesperada (ex: problema ao carregar dotenv)
             e.printStackTrace();
             return false;
         }

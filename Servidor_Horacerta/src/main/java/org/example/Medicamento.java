@@ -6,17 +6,14 @@ import org.bson.types.ObjectId;
 
 public class Medicamento extends ComunicadoJson {
 
-    // Campos Privados (POJO)
+    // Campos Privados
     private String id;
     private String nome;
     private String dia;
     private String horario;
     private String descricao;
     private String idUsuario;
-    private boolean tomou; // Campo booleano para o status de tomada do medicamento
-
-
-
+    private boolean tomou;
 
     public Medicamento() {
         super("Medicamento");
@@ -38,8 +35,6 @@ public class Medicamento extends ComunicadoJson {
         this.idUsuario = idUsuario;
         this.tomou = tomou;
     }
-
-
 
     // Getters
     public String getId() { return id; }
@@ -67,7 +62,7 @@ public class Medicamento extends ComunicadoJson {
 
         ObjectId objectId = doc.getObjectId("_id");
         if (objectId != null) {
-            // CORREÇÃO: toHexString() garante que venha apenas o código limpo "6924ef..."
+            // toHexString garante que venha apenas o código limpo
             m.setId(objectId.toHexString());
         } else {
             // Fallback caso o ID tenha sido salvo como String manualmente
@@ -82,7 +77,7 @@ public class Medicamento extends ComunicadoJson {
         m.setDescricao(doc.getString("descricao"));
         m.setIdUsuario(doc.getString("idUsuario"));
 
-        // Tratamento do campo booleano 'tomou'
+        // Trata o campo booleano tomou
         m.setTomou(doc.getBoolean("tomou", false));
 
         return m;

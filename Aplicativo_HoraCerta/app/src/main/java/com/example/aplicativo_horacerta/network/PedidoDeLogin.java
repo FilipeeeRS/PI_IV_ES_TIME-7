@@ -5,13 +5,11 @@ import com.google.gson.annotations.SerializedName;
 public class PedidoDeLogin extends ComunicadoJson {
     private static final long serialVersionUID = 1L;
 
-
     @SerializedName("login")
     private String email;
 
     @SerializedName("firebaseUid")
     private String firebaseUid;
-
 
     public PedidoDeLogin() {
         super("Login");

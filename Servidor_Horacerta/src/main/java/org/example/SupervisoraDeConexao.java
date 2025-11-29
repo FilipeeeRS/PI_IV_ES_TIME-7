@@ -8,14 +8,12 @@ import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.bson.Document;
 
-
 public class SupervisoraDeConexao extends Thread
 {
     private Parceiro            usuario;
     private Socket              conexao;
     private ArrayList<Parceiro> usuarios;
     private Gson gson;
-
 
     public SupervisoraDeConexao
             (Socket conexao, ArrayList<Parceiro> usuarios)
@@ -85,7 +83,7 @@ public class SupervisoraDeConexao extends Thread
                     case "ConectarIdoso":
                         PedidoDeConexao pedidoConexao = gson.fromJson(json, PedidoDeConexao.class);
 
-                        // Chama a função que criamos acima (que mexe no Mongo)
+                        // Chama a função que criada acima
                         boolean sucessoConexao = pedidoConexao.realizarVinculo();
 
                         String msg = sucessoConexao ? "Vinculo realizado com sucesso!" : "Erro ao vincular. Verifique o email.";
@@ -129,22 +127,22 @@ public class SupervisoraDeConexao extends Thread
                     case "PedidoDeListarMedicamentos":
                         PedidoDeListarMedicamentos pedidoListarMedicamento = gson.fromJson(json, PedidoDeListarMedicamentos.class);
 
-                        // 1. Executa a busca no MongoDB, obtendo a lista de documentos
+                        // Executa a busca no MongoDB, obtem lista de documentos
                         List<Document> listaDocumentos = pedidoListarMedicamento.executar();
 
-                        // 2. Converte a List<Document> para List<Medicamento>
+                        // Converte a List<Document> para List<Medicamento>
                         List<Medicamento> listaMedicamentosPOJO = new ArrayList<>();
                         for (Document doc : listaDocumentos) {
                             listaMedicamentosPOJO.add(Medicamento.fromDocument(doc));
                         }
 
-                        // 3. Cria e envia o objeto que contém a lista
+                        // Cria e envia o objeto que contém a lista
                         this.usuario.receba(new ResultadoListaMedicamentos(listaMedicamentosPOJO)); // Use 'recebe'
                         break;
 
                     case "PedidoDeEditarMedicamento":
                         PedidoDeEditarMedicamento pedidoEdicao = gson.fromJson(json, PedidoDeEditarMedicamento.class);
-                        boolean editou = pedidoEdicao.executar(); // <-- Assume a existência do método 'executar'
+                        boolean editou = pedidoEdicao.executar();
 
                         String tagResposta = editou ? "EdicaoSucesso" : "EdicaoFalha";
 
@@ -179,7 +177,5 @@ public class SupervisoraDeConexao extends Thread
             System.err.println("Erro de supervisao: " + erro.getMessage());
             try { if (usuario != null) usuario.adeus(); } catch (Exception ignored) {}
         }
-
     }
-
 }

@@ -19,7 +19,7 @@ public class PedidoBuscarIdoso extends ComunicadoJson {
     }
 
     public String procurarNomeNoBanco() {
-        // LOG 1: Ver se o método foi chamado e se o email chegou
+        // Ver se o métod0 foi chamado e se o email chegou
         System.out.println("[BUSCA] Iniciando busca...");
         System.out.println("[BUSCA] Email recebido do Android: " + this.email);
 
@@ -36,13 +36,13 @@ public class PedidoBuscarIdoso extends ComunicadoJson {
             MongoDatabase db = client.getDatabase(dbName);
             MongoCollection<Document> col = db.getCollection("usuario");
 
-            // LOG 2: Confirmar o filtro que estamos usando
+            // Confirma o filtro
             String regexPattern = "^" + java.util.regex.Pattern.quote(this.email) + "$";
             System.out.println("[BUSCA] Usando filtro Regex: " + regexPattern);
 
             Document doc = col.find(Filters.regex("email", regexPattern, "i")).first();
 
-            // LOG 3: Ver o que o banco devolveu
+            // Ver o que o banco devolveu
             if (doc == null) {
                 System.out.println("[BUSCA] NENHUM documento encontrado para este email.");
                 return null;

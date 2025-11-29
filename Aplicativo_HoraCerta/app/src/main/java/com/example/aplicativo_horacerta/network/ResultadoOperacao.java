@@ -16,7 +16,7 @@ public class ResultadoOperacao extends ComunicadoJson {
         this.mensagem = mensagem;
     }
 
-    // Getters que o Kotlin vai usar
+    // Getters para o Kotlin
     public boolean isSucesso() {
         return sucesso;
     }

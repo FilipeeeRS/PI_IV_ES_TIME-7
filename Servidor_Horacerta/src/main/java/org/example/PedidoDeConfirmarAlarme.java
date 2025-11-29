@@ -30,7 +30,6 @@ public class PedidoDeConfirmarAlarme extends ComunicadoJson {
     private String horario;
 
     public PedidoDeConfirmarAlarme() {
-        // Essa string deve ser a mesma usada no switch da Supervisora
         super("ConfirmarAlarme");
     }
 
@@ -55,9 +54,7 @@ public class PedidoDeConfirmarAlarme extends ComunicadoJson {
             MongoDatabase db = client.getDatabase(dbName);
             MongoCollection<Document> collection = db.getCollection("medicamentos");
 
-            // 1. Procura o remédio específico deste usuário
-            // Como o Android não mandou o ID do medicamento no alarme (só o nome),
-            // filtramos por Nome + Usuario + Dia + Horario para garantir que é o certo.
+            // Procura o remédio específico deste usuário
             Bson filtro = and(
                     eq("idUsuario", this.idUsuario),
                     eq("nome", this.nomeRemedio),
@@ -65,7 +62,7 @@ public class PedidoDeConfirmarAlarme extends ComunicadoJson {
                     eq("horario", this.horario)
             );
 
-            // 2. Atualiza o status para TOMOU = TRUE
+            // Atualiza o status para TOMOU = TRUE
             Bson update = set("tomou", true);
 
             UpdateResult result = collection.updateOne(filtro, update);

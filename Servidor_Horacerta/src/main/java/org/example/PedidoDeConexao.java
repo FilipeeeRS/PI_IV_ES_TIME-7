@@ -29,13 +29,13 @@ public class PedidoDeConexao extends ComunicadoJson {
 
     // Método que faz a mágica no Banco (Seguindo o padrão do seu grupo)
     public boolean realizarVinculo() {
-        // 1. Validações básicas
+        // Validações básicas
         if (emailCuidador == null || emailCuidador.isBlank() || emailIdoso == null || emailIdoso.isBlank()) {
             System.err.println("[CONEXAO] Emails inválidos.");
             return false;
         }
 
-        // 2. Conexão com o Banco (Cópia do padrão do seu Login)
+        // Conexão com o Banco (Cópia do padrão do seu Login)
         Dotenv dotenv = Dotenv.load();
         String uri = dotenv.get("MONGO_URI");
         String dbName = dotenv.get("MONGO_DATABASE", "sample_horacerta");
@@ -44,13 +44,12 @@ public class PedidoDeConexao extends ComunicadoJson {
             MongoDatabase db = client.getDatabase(dbName);
             MongoCollection<Document> col = db.getCollection("usuario");
 
-            // 3. Buscar o Idoso
+            // Buscar o Idoso
             System.out.println("[CONEXAO] Buscando idoso: " + emailIdoso);
             Document docIdoso = col.find(Filters.eq("email", emailIdoso)).first();
 
             if (docIdoso == null) {
                 System.err.println("[CONEXAO] Idoso não encontrado.");
-                // Dica: Você poderia lançar exceção para avisar o usuário, mas vamos retornar false por enquanto
                 return false;
             }
 
@@ -61,7 +60,7 @@ public class PedidoDeConexao extends ComunicadoJson {
                 return false;
             }
 
-            // 4. Buscar o Cuidador (para pegar o ID dele)
+            // Buscar o Cuidador (para pegar o ID dele)
             System.out.println("[CONEXAO] Buscando cuidador: " + emailCuidador);
             Document docCuidador = col.find(Filters.eq("email", emailCuidador)).first();
 
@@ -73,8 +72,7 @@ public class PedidoDeConexao extends ComunicadoJson {
             String uidCuidador = docCuidador.getString("firebase_uid");
             String uidIdoso = docIdoso.getString("firebase_uid");
 
-            // 5. Realizar o Vínculo (Atualizar o documento do Idoso)
-            // Vamos salvar o ID do cuidador dentro do documento do Idoso
+            // Fazer vínculo (Atualizar o documento do Idoso) ID do cuidador dentro do Idoso
             System.out.println("[CONEXAO] Vinculando Idoso " + uidIdoso + " ao Cuidador " + uidCuidador);
 
             col.updateOne(
@@ -82,7 +80,7 @@ public class PedidoDeConexao extends ComunicadoJson {
                     Updates.set("cuidador_responsavel_uid", uidCuidador)
             );
 
-            // Opcional: Atualizar o Cuidador também (Bidirecional)
+            // Atualizar o Cuidador também
             col.updateOne(
                     Filters.eq("email", emailCuidador),
                     Updates.set("idoso_monitorado_uid", uidIdoso)

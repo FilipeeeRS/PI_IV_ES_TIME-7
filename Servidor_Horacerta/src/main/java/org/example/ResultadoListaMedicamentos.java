@@ -5,9 +5,7 @@ import java.util.List;
 
 public class ResultadoListaMedicamentos extends ComunicadoJson {
 
-
     private List<Medicamento> medicamentos;
-
 
     public ResultadoListaMedicamentos(List<Medicamento> medicamentos) {
         super("ResultadoListaMedicamentos");

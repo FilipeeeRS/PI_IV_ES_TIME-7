@@ -17,7 +17,7 @@ public class PedidoDeCriarMedicamento extends ComunicadoJson {
     @SerializedName("descricao")
     private String descricao;
     @SerializedName("idUsuario")
-    private String idUsuario; // UID do Cuidador
+    private String idUsuario;
 
     // Construtor usado para criar o objeto antes de enviar
     public PedidoDeCriarMedicamento(String nome, String dia, String horario, String descricao, String idUsuario) {

@@ -24,7 +24,7 @@ class AlarmeReceiver : BroadcastReceiver() {
             "HoraCerta:AlarmeWakelock"
         )
 
-        //10 minutis
+        // 10 minutos
         wakeLock.acquire(10 * 60 * 1000L)
 
         try {
@@ -50,6 +50,14 @@ class AlarmeReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
+            // Tenta abrir a tela NA FORÇA BRUTA
+            try {
+                context.startActivity(fullScreenIntent)
+                Log.d("ALARME", "StartActivity chamado com sucesso!")
+            } catch (e: Exception) {
+                Log.e("ALARME", "Bloqueio de background: O Android preferiu a notificação.")
+            }
+
             // Canal de notificação com alta prioridade
             val channelId = "canal_alarme_v2"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -68,7 +76,7 @@ class AlarmeReceiver : BroadcastReceiver() {
                 notificationManager.createNotificationChannel(channel)
             }
 
-            // Formato notificalção "FULL SCREEN"
+            // Formato notificação "FULL SCREEN"
             val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle("HORA DO REMÉDIO: $nome")
@@ -84,7 +92,7 @@ class AlarmeReceiver : BroadcastReceiver() {
             if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
                 NotificationManagerCompat.from(context).notify(12345, builder.build())
             } else {
-                // Se não tiver permissão de notificação, tentamos abrir a Activity na força bruta
+                // Se não tiver permissão de notificação, tentamos abrir a Activity na força bruta de novo
                 context.startActivity(fullScreenIntent)
             }
             Log.d("ALARME", "Notificação enviada com FullScreenIntent")
@@ -92,7 +100,7 @@ class AlarmeReceiver : BroadcastReceiver() {
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
-            // Solta o WakeLock depois de 5 segundos para não gastar bateria se algo travar
+            // Solta o WakeLock depois de 5 segundos
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 if (wakeLock.isHeld) wakeLock.release()
             }, 5000)
