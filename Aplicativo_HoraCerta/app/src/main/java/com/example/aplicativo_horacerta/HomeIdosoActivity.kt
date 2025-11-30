@@ -47,7 +47,9 @@ class HomeIdosoActivity : ComponentActivity() {
                 HomeIdosoScreen(
                     onLogoutClick = {
                         FirebaseAuth.getInstance().signOut()
-                        val intent = Intent(this, InicioTelaActivity::class.java)
+                        val prefs = getSharedPreferences("AuthPrefs", Context.MODE_PRIVATE)
+                        prefs.edit().clear().apply()
+                        val intent = Intent(this, InicioTelaActivity::class.java) // Ou FazerLoginActivity::class.java
                         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
                         startActivity(intent)
                         finish()

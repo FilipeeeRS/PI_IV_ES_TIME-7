@@ -124,8 +124,6 @@ class HomeCuidadorActivity : ComponentActivity() {
     }
 }
 
-
-
 data class Medicamento(
     // CORREÇÃO 1: Mudar de Int para String
     val id: String,
@@ -215,8 +213,6 @@ suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamento
     }
 }
 
-
-
 data class HistoricoMedicamento(
     val id: Int,
     val nome: String,
@@ -224,9 +220,6 @@ data class HistoricoMedicamento(
     val data: String,
     val horario: String
 )
-
-
-
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -240,8 +233,6 @@ fun HomeCuidador(
     val pagerState = rememberPagerState(initialPage = initialTabIndex) { 2 }
     var selectedTabIndex by remember { mutableIntStateOf(initialTabIndex) }
     val scope = rememberCoroutineScope()
-
-
 
     val tabBarColor = Color(0xFFEEEEEE)
     val contentColor = Color.White
@@ -618,7 +609,6 @@ fun MedicamentosTab(
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun DeleteConfirmationDialog(
     medicamentoNome: String,
@@ -691,8 +681,6 @@ fun MedicamentoItem(
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
-
 // Mude a função para aceitar a lista
 @Composable
 fun HistoricoTab(historicoList: List<HistoricoMedicamento>) {
@@ -716,6 +704,7 @@ fun HistoricoTab(historicoList: List<HistoricoMedicamento>) {
         }
     }
 }
+
 @Composable
 fun HistoricoItem(historico: HistoricoMedicamento) {
     val statusText = if (historico.tomou) "Status: Tomou" else "Status: Não Tomou"
@@ -751,22 +740,3 @@ fun HistoricoItem(historico: HistoricoMedicamento) {
         }
     }
 }
-
-/*
-@Preview(showSystemUi = true, showBackground = true, name = "Aba Medicamentos")
-@Composable
-fun PreviewHomeCuidador() {
-    Surface(color = Color.White) {
-        // Passa uma função vazia para o Logout no Preview
-        HomeCuidador(initialTabIndex = 0, onLogoutClick = {})
-    }
-}
-@Preview(showSystemUi = true, showBackground = true, name = "Aba Histórico")
-@Composable
-fun PreviewHomeCuidadorHistorico() {
-    Surface(color = Color.White) {
-        // Passa uma função vazia para o Logout no Preview
-        HomeCuidador(initialTabIndex = 1, onLogoutClick = {})
-    }
-}
-*/

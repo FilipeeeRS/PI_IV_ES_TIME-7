@@ -61,7 +61,7 @@ class FazerRegistroActivity : ComponentActivity() {
                     val firebaseUid = user?.uid
 
                     if (firebaseUid != null) {
-                        Toast.makeText(this, "Cadastro no Firebase OK. Enviando dados...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Cadastro Feito. Enviando dados...", Toast.LENGTH_SHORT).show()
 
                         // 2. CHAMA A REDE APENAS COM O UID
                         // Precisamos de um CoroutineScope para chamar a função suspend
@@ -80,7 +80,7 @@ class FazerRegistroActivity : ComponentActivity() {
                                         startActivity(intent)
                                         finish()
                                     } else {
-                                        Toast.makeText(this@FazerRegistroActivity, "Falha: Usuário já existe", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(this@FazerRegistroActivity, "Falha: Esse Usuário já existe", Toast.LENGTH_LONG).show()
                                     }
                                 } catch (e: JSONException) {
                                     Toast.makeText(this@FazerRegistroActivity, result, Toast.LENGTH_LONG).show()
@@ -88,7 +88,7 @@ class FazerRegistroActivity : ComponentActivity() {
                             }
                         }
                     } else {
-                        Toast.makeText(this, "Erro: UID não encontrado.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Erro: Conta não encontrado.", Toast.LENGTH_LONG).show()
                     }
                 } else {
                     // 3. ERRO DO FIREBASE

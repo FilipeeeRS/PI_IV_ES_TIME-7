@@ -67,9 +67,12 @@ class FazerLoginActivity : ComponentActivity() {
 
             // Redireciona imediatamente se os dados essenciais estiverem presentes
             if (uid != null && profileType != null) {
-                Toast.makeText(this, "Sessão restaurada. Bem-vindo(a) de volta.", Toast.LENGTH_SHORT).show()
 
+                Toast.makeText(this, "Sessão restaurada. Bem-vindo(a) de volta.", Toast.LENGTH_SHORT).show()
                 navigateToHome(uid, profileType)
+            } else{
+
+                prefs.edit().clear().apply()
             }
         }
     }
@@ -102,7 +105,7 @@ class FazerLoginActivity : ComponentActivity() {
                     val firebaseUid = user?.uid
 
                     if (firebaseUid != null) {
-                        Toast.makeText(this, "Login Firebase OK. Buscando Perfil...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Login Encontrado. Buscando Perfil...", Toast.LENGTH_SHORT).show()
 
                         lifecycleScope.launch {
 
@@ -125,13 +128,13 @@ class FazerLoginActivity : ComponentActivity() {
                                             apply() // Aplica a mudança
                                         }
 
-                                        Toast.makeText(context, "Login OK. Perfil: $profileType", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Login Feito. Perfil: $profileType", Toast.LENGTH_LONG).show()
 
 
                                         navigateToHome(uid, profileType)
 
                                     } else {
-                                        Toast.makeText(context, "Erro: Resposta do servidor incompleta.", Toast.LENGTH_LONG).show()
+                                        Toast.makeText(context, "Erro: Falha Na Resposta do servidor.", Toast.LENGTH_LONG).show()
                                     }
                                 } else {
                                     // ... (Tratamento de Falha de Rede/Servidor) ...
@@ -145,7 +148,7 @@ class FazerLoginActivity : ComponentActivity() {
                             }
                         }
                     } else {
-                        Toast.makeText(this, "Erro Firebase: UID não disponível.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Erro: Cotna Não Encontrada.", Toast.LENGTH_LONG).show()
                     }
                 } else {
                     // 7. TRATAMENTO DE FALHA DE AUTENTICAÇÃO FIREBASE (Email/Senha Inválidos)
