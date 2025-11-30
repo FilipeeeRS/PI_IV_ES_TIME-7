@@ -32,16 +32,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.example.aplicativo_horacerta.network.Parceiro
-import com.example.aplicativo_horacerta.network.PedidoDeConfirmarAlarme
-import kotlinx.coroutines.Dispatchers
+import com.example.aplicativo_horacerta.socket.MedicamentoRepository // <--- O Repositório
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -99,7 +91,7 @@ class AlarmeActivity : ComponentActivity() {
         Toast.makeText(this, "Confirmando...", Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
 
-            val sucesso = performConfirmarAlarme(idUsuario, nomeRemedio, dia, horario)
+            val sucesso = MedicamentoRepository.performConfirmarAlarme(idUsuario, nomeRemedio, dia, horario)
 
             if (sucesso) {
                 Toast.makeText(getApplicationContext(), "Confirmado no Servidor!", Toast.LENGTH_SHORT).show()
@@ -107,29 +99,6 @@ class AlarmeActivity : ComponentActivity() {
                 Toast.makeText(getApplicationContext(), "Salvo localmente (Erro Servidor)", Toast.LENGTH_SHORT).show()
             }
             finishAndRemoveTask()
-        }
-    }
-
-    private suspend fun performConfirmarAlarme(id: String, nome: String, dia: String, horario: String): Boolean {
-        return withContext(Dispatchers.IO) {
-
-            val SERVER_IP = "10.0.116.3"
-            val SERVER_PORT = 3000
-
-            try {
-                val socket = Socket(SERVER_IP, SERVER_PORT)
-                val parceiro = Parceiro(socket, BufferedReader(InputStreamReader(socket.getInputStream())), BufferedWriter(OutputStreamWriter(socket.getOutputStream())))
-
-                val pedido = PedidoDeConfirmarAlarme(id, nome, dia, horario)
-                parceiro.receba(pedido)
-
-                val resposta = parceiro.envie()
-                socket.close()
-                resposta != null
-            } catch (e: Exception) {
-                e.printStackTrace()
-                false
-            }
         }
     }
 
@@ -200,12 +169,10 @@ class AlarmeActivity : ComponentActivity() {
                 val format = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR"))
                 val dataCompleta = format.parse("$dia $horario")
 
-                // Se a data for nula ou já passou, não agenda
                 if (dataCompleta == null) return
 
                 calendar.time = dataCompleta
 
-                // Se o horário já passou hoje, ignora ou joga pro futuro
                 if (calendar.timeInMillis < System.currentTimeMillis()) {
                     Log.d("ALARME", "Horário $horario já passou. Ignorando agendamento.")
                     return
@@ -219,7 +186,6 @@ class AlarmeActivity : ComponentActivity() {
                 putExtra("DIA", dia)
                 putExtra("HORARIO", horario)
                 putExtra("ID_USUARIO", idUsuario)
-                // Adiciona ação para diferenciar intents
                 action = System.currentTimeMillis().toString()
             }
 

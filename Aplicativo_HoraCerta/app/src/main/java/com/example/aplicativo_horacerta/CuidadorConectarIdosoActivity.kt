@@ -23,20 +23,12 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.aplicativo_horacerta.network.*
+import com.example.aplicativo_horacerta.socket.NetworkService
+import com.example.aplicativo_horacerta.socket.UserRepository
 import com.google.firebase.auth.FirebaseAuth
-import com.google.gson.Gson
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.Socket
 
 class CuidadorConectarIdosoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -49,83 +41,9 @@ class CuidadorConectarIdosoActivity : ComponentActivity() {
     }
 }
 
-// Busca o nome
-suspend fun buscarIdosoViaSocket(email: String, onResult: (Boolean, String?) -> Unit) {
-
-    val SERVER_IP = "10.0.116.3"
-    //val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-    val gson = Gson()
-
-    withContext(Dispatchers.IO) {
-        var servidor: Parceiro? = null
-        try {
-            val conexao = Socket(SERVER_IP, SERVER_PORT)
-            servidor = Parceiro(conexao,
-                BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8)),
-                BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
-            )
-
-            // Manda pedido de busca
-            servidor.receba(PedidoBuscarIdoso(email))
-
-            val jsonString = servidor.envieJson()
-
-            // Converte o texto para o objeto certo
-            val resultado = gson.fromJson(jsonString, ResultadoBuscaIdoso::class.java)
-
-            withContext(Dispatchers.Main) {
-                // Se o servidor mandou true, agora vai chegar true aqui
-                onResult(resultado.isEncontrou, resultado.nomeIdoso)
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            withContext(Dispatchers.Main) { onResult(false, null) }
-        } finally {
-            servidor?.adeus()
-        }
-    }
-}
-
-suspend fun confirmarConexaoViaSocket(emailIdoso: String, onResult: (Boolean, String) -> Unit) {
-    val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-    val gson = Gson()
-    val usuarioLogado = FirebaseAuth.getInstance().currentUser
-    val emailCuidador = usuarioLogado?.email ?: return
-
-    withContext(Dispatchers.IO) {
-        var servidor: Parceiro? = null
-        try {
-            val conexao = Socket(SERVER_IP, SERVER_PORT)
-            servidor = Parceiro(conexao,
-                BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8)),
-                BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
-            )
-
-            servidor.receba(PedidoDeConexao(emailCuidador, emailIdoso))
-
-            // envieJson() pegar o texto BRUTO e não perder dados
-            val jsonString = servidor.envieJson()
-
-            val resultado = gson.fromJson(jsonString, ResultadoOperacao::class.java)
-
-            withContext(Dispatchers.Main) {
-                val msg = resultado.mensagem ?: "Vinculado com Sucesso!"
-                onResult(resultado.isSucesso, msg)
-            }
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) { onResult(false, "Erro: ${e.message}") }
-        } finally {
-            servidor?.adeus()
-        }
-    }
-}
-
 @Composable
 fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
     var emailIdoso by remember { mutableStateOf("") }
-
     var nomeEncontrado by remember { mutableStateOf<String?>(null) }
     var showConfirmacao by remember { mutableStateOf(false) }
 
@@ -138,7 +56,7 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
             Column {
                 Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
                     Image(
-                        painter = painterResource(id = R.drawable.ic_launcher_background), // Ajuste se necessário
+                        painter = painterResource(id = R.drawable.ic_launcher_background),
                         contentDescription = "Fundo",
                         modifier = Modifier.fillMaxSize(),
                         contentScale = ContentScale.Crop
@@ -210,18 +128,19 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                 if (emailIdoso.isNotBlank()) {
                                     isLoading = true
                                     scope.launch {
-                                        buscarIdosoViaSocket(emailIdoso) { encontrou, nome ->
-                                            isLoading = false
-                                            if (encontrou && nome != null) {
-                                                if (nome.contains("(JÁ POSSUI CUIDADOR)")) {
-                                                    Toast.makeText(context, "Este idoso já está sendo monitorado por alguém!", Toast.LENGTH_LONG).show()
-                                                } else {
-                                                    nomeEncontrado = nome
-                                                    showConfirmacao = true
-                                                }
+                                        val userRepository = UserRepository(NetworkService())
+                                        val (encontrou, nome) = userRepository.buscarIdoso(emailIdoso)
+
+                                        isLoading = false
+                                        if (encontrou && nome != null) {
+                                            if (nome.contains("(JÁ POSSUI CUIDADOR)")) {
+                                                Toast.makeText(context, "Este idoso já está sendo monitorado por alguém!", Toast.LENGTH_LONG).show()
                                             } else {
-                                                Toast.makeText(context, "Idoso não encontrado!", Toast.LENGTH_SHORT).show()
+                                                nomeEncontrado = nome
+                                                showConfirmacao = true
                                             }
+                                        } else {
+                                            Toast.makeText(context, "Idoso não encontrado!", Toast.LENGTH_SHORT).show()
                                         }
                                     }
                                 } else {
@@ -237,19 +156,10 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                         }
                     } else {
                         // Confirmação
-                        Text(
-                            "Encontramos:",
-                            fontSize = 14.sp, color = Color.Gray
-                        )
-                        Text(
-                            nomeEncontrado ?: "",
-                            fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50)
-                        )
+                        Text("Encontramos:", fontSize = 14.sp, color = Color.Gray)
+                        Text(nomeEncontrado ?: "", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            "Deseja vincular-se a este idoso?",
-                            fontSize = 16.sp, color = Color.Black
-                        )
+                        Text("Deseja vincular-se a este idoso?", fontSize = 16.sp, color = Color.Black)
 
                         Spacer(modifier = Modifier.height(24.dp))
 
@@ -268,12 +178,17 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                 onClick = {
                                     isLoading = true
                                     scope.launch {
-                                        confirmarConexaoViaSocket(emailIdoso) { sucesso, msg ->
-                                            isLoading = false
-                                            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
-                                            if (sucesso) {
-                                                onBackClick()
-                                            }
+                                        val emailCuidador = FirebaseAuth.getInstance().currentUser?.email ?: return@launch
+                                        val userRepository = UserRepository(NetworkService())
+
+                                        val resultado = userRepository.performConexao(emailIdoso, emailCuidador)
+
+                                        isLoading = false
+                                        val msg = resultado.mensagem ?: "Operação finalizada."
+                                        Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+
+                                        if (resultado.isSucesso) {
+                                            onBackClick()
                                         }
                                     }
                                 },

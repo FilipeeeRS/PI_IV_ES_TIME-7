@@ -3,7 +3,6 @@ package com.example.aplicativo_horacerta
 import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,7 +21,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.foundation.layout.Box
@@ -31,49 +29,24 @@ import androidx.compose.material.icons.outlined.Info
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import kotlinx.coroutines.launch
 import androidx.compose.ui.platform.LocalContext
-import com.example.aplicativo_horacerta.network.Resultado
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import java.io.ObjectInputStream
-import java.io.ObjectOutputStream
-import java.net.Socket
-import com.google.gson.Gson
+import java.io.Serializable
 import java.text.SimpleDateFormat
-import java.util.Calendar
-import java.util.Locale
-import java.util.Date
-
-
 import androidx.compose.material.icons.filled.ExitToApp
 import androidx.compose.material.icons.outlined.AddCircleOutline
-import androidx.core.content.ContextCompat.startActivity
-import com.example.aplicativo_horacerta.network.Parceiro
-import com.example.aplicativo_horacerta.network.PedidoDeCriarMedicamento
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.io.Serializable // Necessário para passar o objeto Medicamento
-
-import com.example.aplicativo_horacerta.FazerLoginActivity
 import com.example.aplicativo_horacerta.FazerLoginActivity.Companion.KEY_USER_UID
-import com.example.aplicativo_horacerta.network.Comunicado
-import com.example.aplicativo_horacerta.network.ComunicadoJson
-import com.example.aplicativo_horacerta.network.PedidoDeListarMedicamentos
 import com.google.gson.annotations.SerializedName
-
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.example.aplicativo_horacerta.network.PedidoDeDeletarMedicamento
+import com.example.aplicativo_horacerta.network.Comunicado
+import com.example.aplicativo_horacerta.socket.MedicamentoRepository
 
 class HomeCuidadorActivity : ComponentActivity() {
 
@@ -84,13 +57,10 @@ class HomeCuidadorActivity : ComponentActivity() {
         val profileType = intent.getStringExtra(FazerLoginActivity.KEY_PROFILE_TYPE)
 
         if (userUid == null || profileType == null) {
-            // Caso de falha: Redirecionar para o login
             Toast.makeText(this, "Erro: Falha na passagem de dados de sessão.", Toast.LENGTH_LONG).show()
-            // Opcional: Redirecionar para FazerLoginActivity ou fechar
             finish()
             return
         }
-        Toast.makeText(this, "Home do $profileType. UID: $userUid", Toast.LENGTH_SHORT).show()
         setContent {
             Surface(color = Color.Black) {
                 HomeCuidador(
@@ -105,25 +75,17 @@ class HomeCuidadorActivity : ComponentActivity() {
         }
     }
 
-    // fun logout
     fun performLogout() {
-        // Remove a sessão do Firebase
         FirebaseAuth.getInstance().signOut()
-
-        // Limpa os dados do SharedPreferences
         val prefs = getSharedPreferences(FazerLoginActivity.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().apply()
 
-        // Redireciona para a tela de Login
         val intent = Intent(this, FazerLoginActivity::class.java)
-        // Adiciona flags para limpar o histórico de atividades
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
     }
 }
-
-
 
 data class Medicamento(
     val id: String,
@@ -143,52 +105,6 @@ data class ResultadoListaMedicamentos(
 data class WrapperResposta(
     @SerializedName("operacao") val operacaoJsonString: String
 )
-
-suspend fun performListarMedicamentos(userId: String): ResultadoListaMedicamentos? {
-
-    val SERVER_IP = "10.0.116.3"
-    //val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8
-
-    val pedido = PedidoDeListarMedicamentos(userId)
-    val gson = Gson()
-
-    return withContext(Dispatchers.IO) {
-        var conexao: Socket? = null
-        try {
-            conexao = Socket(SERVER_IP, SERVER_PORT)
-            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
-            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
-            val servidor = Parceiro(conexao, receptor, transmissor)
-            servidor.receba(pedido)
-            val respostaComunicado: Any? = servidor.envie()
-
-            conexao.close()
-            conexao = null
-
-            if (respostaComunicado is ComunicadoJson) {
-                val wrapperJson = respostaComunicado.json
-                val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
-                val jsonStringAninhada = wrapper.operacaoJsonString
-                val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoListaMedicamentos::class.java)
-                Log.d("Network", "JSON Interno Final: $jsonStringAninhada")
-                return@withContext resultadoFinal
-
-            } else {
-                Log.e("Network", "Resposta inesperada: Não é um ComunicadoJson.")
-                null
-            }
-
-        } catch (e: Exception) {
-            Log.e("Network", "Erro fatal ao listar medicamentos (chegou ao parsing):", e)
-            e.printStackTrace()
-            null
-        } finally {
-            conexao?.close()
-        }
-    }
-}
 
 data class HistoricoMedicamento(
     val id: String,
@@ -221,7 +137,6 @@ fun HomeCuidador(
     val context = LocalContext.current
     val medicamentosList = remember { mutableStateListOf<Medicamento>() }
     val historicoList = remember { mutableStateListOf<HistoricoMedicamento>() }
-    var carregamentoFalhou by remember { mutableStateOf(false) }
     val lifecycleOwner = LocalLifecycleOwner.current
 
     DisposableEffect(lifecycleOwner) {
@@ -229,18 +144,16 @@ fun HomeCuidador(
             if (event == Lifecycle.Event.ON_RESUME) {
                 if (userId != null) {
                     scope.launch {
-                        val resultado = performListarMedicamentos(userId)
-                        if (resultado?.medicamentos != null) {
+                        // Chamada ao Repositório
+                        val resultado = MedicamentoRepository.performListarMedicamentos(userId)
 
-                            // formatar data
+                        if (resultado?.medicamentos != null) {
                             val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale("pt", "BR"))
                             val agora = java.util.Calendar.getInstance().time
 
-                            // Limpar lista
                             medicamentosList.clear()
                             historicoList.clear()
 
-                            // Separar em (futuros e passados)
                             val (futuros, passados) = resultado.medicamentos.partition { remedio ->
                                 try {
                                     val dataHoraRemedio = sdf.parse("${remedio.data} ${remedio.horario}")
@@ -250,12 +163,10 @@ fun HomeCuidador(
                                 }
                             }
 
-                            // Preencher lista de medicamentos, ordenar por data
                             medicamentosList.addAll(futuros.sortedBy {
                                 try { sdf.parse("${it.data} ${it.horario}") } catch(e:Exception) { null }
                             })
 
-                            // Preencher lista do Histórico
                             passados.forEach { remedioPassado ->
                                 historicoList.add(
                                     HistoricoMedicamento(
@@ -267,9 +178,6 @@ fun HomeCuidador(
                                     )
                                 )
                             }
-
-                        } else {
-                            // Opcional: Toast de erro
                         }
                     }
                 }
@@ -418,19 +326,16 @@ fun HomeCuidador(
                     medicamentosList = medicamentosList,
                     onRemoveMedicamento = { medicamento ->
                         scope.launch {
-                            // userId deve ser passado para a função de deleção!
-                            val usuarioId = userId ?: return@launch // Garante que o ID não é nulo antes de prosseguir
+                            val usuarioId = userId ?: return@launch
 
-                            val resultado = performDeleteMedicamento(medicamento.id.toString(), usuarioId)
+                            // Chamada ao Repositório para Deletar
+                            val resultado = MedicamentoRepository.performDeleteMedicamento(medicamento.id, usuarioId)
 
-                            // Se o servidor retornar ResultadoOperacao(isSucesso = true), esta condição passa
-                            if (resultado?.isSucesso == true) {
-                                // **Isto remove o item da UI e resolve o seu problema de sincronização**
+                            if (resultado.isSucesso) {
                                 medicamentosList.remove(medicamento)
                                 Toast.makeText(context, "Medicamento deletado!", Toast.LENGTH_SHORT).show()
                             } else {
-                                // Usa a mensagem de erro da resposta (ou uma genérica se for nula)
-                                val mensagemErro = resultado?.mensagem ?: "Erro desconhecido ao deletar."
+                                val mensagemErro = resultado.mensagem ?: "Erro desconhecido ao deletar."
                                 Toast.makeText(context, mensagemErro, Toast.LENGTH_LONG).show()
                             }
                         }
@@ -443,77 +348,12 @@ fun HomeCuidador(
 }
 
 data class ResultadoOperacao(
-    @SerializedName("tipo")
-    val tipo: String,
-
-    @SerializedName("sucesso")
-    val isSucesso: Boolean,
-
-    @SerializedName("mensagem")
-    val mensagem: String? = null
+    @SerializedName("tipo") val tipo: String,
+    @SerializedName("sucesso") val isSucesso: Boolean,
+    @SerializedName("mensagem") val mensagem: String? = null
 ) : Comunicado()
 
-// Função de rede para deletar medicamento
-suspend fun performDeleteMedicamento(
-    idMedicamento: String,
-    idUsuario: String?
-): ResultadoOperacao? {
 
-    val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8
-
-    val pedido = PedidoDeDeletarMedicamento(idMedicamento, idUsuario)
-    val gson = Gson()
-
-    return withContext(Dispatchers.IO) {
-        var conexao: Socket? = null
-        try {
-            // Inicializa a conexão
-            conexao = Socket(SERVER_IP, SERVER_PORT)
-
-            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
-            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
-            val servidor = Parceiro(conexao, receptor, transmissor)
-
-            // Envia pedido
-            servidor.receba(pedido)
-            // FORÇA O ENVIO DO PEDIDO ANTES DE TENTAR LER A RESPOSTA
-            transmissor.flush()
-
-            // Aguarda e recebe a resposta do servidor (ComunicadoJson)
-            val respostaComunicado: Any? = servidor.envie() // Lê resposta
-
-            if (respostaComunicado == null) {
-                Log.e("DeleteNetwork", "Erro: Resposta do servidor é NULL.")
-                return@withContext ResultadoOperacao(tipo = "ErroCliente", isSucesso = false, mensagem = "Resposta vazia do servidor.")
-            }
-
-            if (respostaComunicado is ComunicadoJson) {
-                val wrapperJson = respostaComunicado.json
-                val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
-                val jsonStringAninhada = wrapper.operacaoJsonString
-
-                // Desserializa o resultado final
-                val resultadoFinal = gson.fromJson(jsonStringAninhada, ResultadoOperacao::class.java)
-
-                Log.d("DeleteNetwork", "Resultado Final (isSucesso): ${resultadoFinal.isSucesso}")
-                return@withContext resultadoFinal
-
-            } else {
-                Log.e("DeleteNetwork", "Erro: Resposta recebida não é um ComunicadoJson.")
-                return@withContext ResultadoOperacao(tipo = "ErroCliente", isSucesso = false, mensagem = "Formato de resposta inesperado.")
-            }
-
-        } catch (e: Exception) {
-            Log.e("DeleteNetwork", "Erro GERAL de rede ou desserialização:", e)
-            return@withContext ResultadoOperacao(tipo = "ErroComunicação", isSucesso = false, mensagem = "Erro de comunicação: ${e.message}")
-        } finally {
-            conexao?.close()
-        }
-    }
-}
-////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun MedicamentosTab(
     userId: String,
@@ -584,7 +424,6 @@ fun MedicamentosTab(
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun DeleteConfirmationDialog(
     medicamentoNome: String,
@@ -593,28 +432,18 @@ fun DeleteConfirmationDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(text = "Confirmar Exclusão")
-        },
-        text = {
-            Text(text = "Você tem certeza que deseja deletar o medicamento \"$medicamentoNome\"?")
-        },
+        title = { Text(text = "Confirmar Exclusão") },
+        text = { Text(text = "Você tem certeza que deseja deletar o medicamento \"$medicamentoNome\"?") },
         confirmButton = {
             Button(
                 onClick = onConfirmDelete,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = Color.Red
-                )
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Red)
             ) {
                 Text("Deletar")
             }
         },
         dismissButton = {
-            Button(
-                onClick = onDismiss
-            ) {
-                Text("Cancelar")
-            }
+            Button(onClick = onDismiss) { Text("Cancelar") }
         }
     )
 }
@@ -628,9 +457,7 @@ fun MedicamentoItem(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF0F0F0)
-        )
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
     ) {
         Row(
             modifier = Modifier
@@ -654,17 +481,13 @@ fun MedicamentoItem(
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
 @Composable
 fun HistoricoTab(historicoList: List<HistoricoMedicamento>) {
-
-    // Se a lista estiver vazia, você pode mostrar uma mensagem
     if (historicoList.isEmpty()) {
         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             Text("Nenhum remédio no histórico.", color = Color.Gray)
         }
     }
-
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -687,8 +510,7 @@ fun HistoricoItem(historico: HistoricoMedicamento) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(8.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = Color(0xFFF0F0F0))
+        colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
     ) {
         Row(
             modifier = Modifier
@@ -712,22 +534,3 @@ fun HistoricoItem(historico: HistoricoMedicamento) {
         }
     }
 }
-
-/*
-@Preview(showSystemUi = true, showBackground = true, name = "Aba Medicamentos")
-@Composable
-fun PreviewHomeCuidador() {
-    Surface(color = Color.White) {
-        // Passa uma função vazia para o Logout no Preview
-        HomeCuidador(initialTabIndex = 0, onLogoutClick = {})
-    }
-}
-@Preview(showSystemUi = true, showBackground = true, name = "Aba Histórico")
-@Composable
-fun PreviewHomeCuidadorHistorico() {
-    Surface(color = Color.White) {
-        // Passa uma função vazia para o Logout no Preview
-        HomeCuidador(initialTabIndex = 1, onLogoutClick = {})
-    }
-}
-*/

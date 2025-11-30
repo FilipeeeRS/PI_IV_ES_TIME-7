@@ -3,7 +3,6 @@ package com.example.aplicativo_horacerta
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
-import android.widget.DatePicker
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -32,16 +31,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.example.aplicativo_horacerta.network.Parceiro
-import com.example.aplicativo_horacerta.network.PedidoDeCriarMedicamento
-import kotlinx.coroutines.Dispatchers
+import com.example.aplicativo_horacerta.socket.MedicamentoRepository
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -56,26 +47,42 @@ class RemédioCriarActivity : ComponentActivity() {
                 RemédioCriarScreen(
                     onBackClick = { finish() },
                     onSaveClick = { nome, dia, horario, descricao ->
+
+                        // Validação
                         if (nome.isBlank() || dia.isBlank() || horario.isBlank()) {
                             Toast.makeText(this, "Preencha todos os campos obrigatórios!", Toast.LENGTH_SHORT).show()
                             return@RemédioCriarScreen
                         }
+
+                        // Validação de Data Futura
                         if (!isDataHorarioValido(dia, horario)) {
                             Toast.makeText(this, "A data e horário devem ser no futuro!", Toast.LENGTH_LONG).show()
                             return@RemédioCriarScreen
                         }
 
-                        lifecycleScope.launch {
-                            performCriarMedicamento(nome, dia, horario, descricao, idUsuarioLogado) { resultado ->
-                                Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
+                        // "Sem descrição" para não dar erro no servidor
+                        val descricaoParaEnviar = if (descricao.isBlank()) "Sem descrição" else descricao
 
-                                if (!resultado.contains("Erro", ignoreCase = true) && idUsuarioLogado != null) {
+                        lifecycleScope.launch {
+                            val resultado = MedicamentoRepository.performCriarMedicamento(
+                                nome, dia, horario, descricaoParaEnviar, idUsuarioLogado
+                            )
+
+                            // Erro mostramos o erro técnico
+                            if (resultado.contains("Erro", ignoreCase = true)) {
+                                Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
+                            } else {
+                                // Em vez de mostrar o JSON, mostramos nossa mensagem:
+                                Toast.makeText(this@RemédioCriarActivity, "Medicamento criado com sucesso!", Toast.LENGTH_SHORT).show()
+
+                                // Agenda o alarme e fecha a tela
+                                if (idUsuarioLogado != null) {
                                     AlarmeActivity.agendar(
                                         context = this@RemédioCriarActivity,
                                         nome = nome,
                                         dia = dia,
                                         horario = horario,
-                                        descricao = descricao,
+                                        descricao = descricaoParaEnviar,
                                         idUsuario = idUsuarioLogado
                                     )
                                     finish()
@@ -101,33 +108,6 @@ fun isDataHorarioValido(dia: String, horario: String): Boolean {
     }
 }
 
-suspend fun performCriarMedicamento(
-    nome: String, dia: String, horario: String, descricao: String, idUsuario: String?, onResult: (String) -> Unit
-) {
-
-    val SERVER_IP = "10.0.116.3"
-    //val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-    val pedido = PedidoDeCriarMedicamento(nome, dia, horario, descricao, idUsuario)
-
-    withContext(Dispatchers.IO) {
-        try {
-            val conexao = Socket(SERVER_IP, SERVER_PORT)
-            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream()))
-            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream()))
-            val servidor = Parceiro(conexao, receptor, transmissor)
-
-            servidor.receba(pedido)
-            val resposta: Any? = servidor.envie()
-
-            withContext(Dispatchers.Main) { onResult(resposta?.toString() ?: "Resposta vazia do servidor") }
-            conexao.close()
-        } catch (e: Exception) {
-            withContext(Dispatchers.Main) { onResult("Erro: ${e.message}") }
-        }
-    }
-}
-
 @Composable
 fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, String, String) -> Unit) {
     var nome by remember { mutableStateOf("") }
@@ -138,7 +118,6 @@ fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, S
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
 
-    // Configura DatePicker para dd/MM/yyyy
     val datePickerDialog = DatePickerDialog(
         context,
         { _, y, m, d ->
@@ -192,7 +171,9 @@ fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, S
             TextField(value = descricao, onValueChange = { descricao = it }, label = { Text("DESCRIÇÃO:") }, singleLine = false, shape = RoundedCornerShape(8.dp), colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), modifier = Modifier.fillMaxWidth().height(150.dp))
             Spacer(Modifier.height(32.dp))
 
-            Box(modifier = Modifier.fillMaxWidth(0.8f).height(70.dp).clip(RoundedCornerShape(100.dp)).clickable { onSaveClick(nome, dia, horario, descricao) }, contentAlignment = Alignment.Center) {
+            Box(modifier = Modifier.fillMaxWidth(0.8f).height(70.dp).clip(RoundedCornerShape(100.dp)).clickable {
+                onSaveClick(nome, dia, horario, descricao)
+            }, contentAlignment = Alignment.Center) {
                 Image(painter = painterResource(id = R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 Text("CONFIRMAR", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
             }
