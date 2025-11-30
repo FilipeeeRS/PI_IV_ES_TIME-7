@@ -1,9 +1,8 @@
-package org.example;
+package org.example.connection;
+
 
 import java.net.*;
 import java.util.*;
-
-import org.example.SupervisoraDeConexao;
 
 public class AceitadoraDeConexao extends Thread
 {

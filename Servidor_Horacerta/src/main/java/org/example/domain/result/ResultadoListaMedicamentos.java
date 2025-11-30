@@ -1,4 +1,7 @@
-package org.example;
+package org.example.domain.result;
+
+import org.example.domain.Medicamento;
+import org.example.protocol.ComunicadoJson;
 
 import java.util.List;
 

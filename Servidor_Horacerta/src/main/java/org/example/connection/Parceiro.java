@@ -1,10 +1,12 @@
-package org.example;
+package org.example.connection;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.Socket;
 import com.google.gson.Gson;
+import org.example.domain.result.ResultadoOperacao;
+import org.example.protocol.*;
 
 public class Parceiro {
     private final Socket conexao;
@@ -23,7 +25,7 @@ public class Parceiro {
         this.transmissor = transmissor;
     }
 
-    public void receba(Comunicado x) throws Exception {
+    public void receba(ComunicadoJson x) throws Exception {
         try {
             String json = gson.toJson(x);
             transmissor.write(json);

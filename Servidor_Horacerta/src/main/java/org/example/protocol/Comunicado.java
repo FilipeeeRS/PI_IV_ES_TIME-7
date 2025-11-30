@@ -1,6 +1,5 @@
-package org.example;
+package org.example.protocol;
 
-// Comunicado.java
 import java.io.Serializable;
 
 public abstract class Comunicado implements Serializable {

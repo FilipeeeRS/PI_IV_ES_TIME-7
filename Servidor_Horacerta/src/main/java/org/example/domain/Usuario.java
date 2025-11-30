@@ -1,6 +1,5 @@
-package org.example;
+package org.example.domain;
 
-import org.bson.types.ObjectId;
 
 public class Usuario {
     private String _id;

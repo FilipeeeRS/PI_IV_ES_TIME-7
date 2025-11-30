@@ -1,9 +1,12 @@
-package org.example;
+package org.example.domain;
+
 
 import com.google.gson.annotations.SerializedName;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.example.protocol.ComunicadoJson;
+
 
 public class PedidoBuscarIdoso extends ComunicadoJson {
 

@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -10,6 +11,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+import org.example.protocol.ComunicadoJson;
 
 // Importações estáticas necessárias para filtros e updates do MongoDB
 import static com.mongodb.client.model.Filters.and;

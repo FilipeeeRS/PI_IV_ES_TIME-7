@@ -1,6 +1,11 @@
-package org.example;
+package org.example.domain.result;
 
-public class ResultadoOperacao extends Comunicado {
+
+import org.example.protocol.ComunicadoJson;
+
+import java.io.Serializable;
+
+public class ResultadoOperacao extends ComunicadoJson implements Serializable  {
 
     // CAMPOS NECESSÁRIOS PARA LOGIN/OUTRAS
     private boolean resultado;
@@ -10,8 +15,9 @@ public class ResultadoOperacao extends Comunicado {
     private boolean sucesso;
     private String mensagem;
 
-    public ResultadoOperacao() {}
-
+    public ResultadoOperacao() {
+        super();
+    }
 
 
     // Construtor Novo (Para o Delete e futuras operações)

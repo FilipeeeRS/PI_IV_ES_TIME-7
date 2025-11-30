@@ -1,7 +1,9 @@
-package org.example;
+package org.example.domain;
+
 
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.example.protocol.ComunicadoJson;
 
 
 public class Medicamento extends ComunicadoJson {

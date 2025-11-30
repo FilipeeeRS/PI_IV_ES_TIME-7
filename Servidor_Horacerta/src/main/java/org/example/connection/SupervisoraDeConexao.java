@@ -1,4 +1,5 @@
-package org.example;
+package org.example.connection;
+
 
 import java.io.*;
 import java.net.*;
@@ -7,12 +8,21 @@ import java.util.*;
 import com.google.gson.Gson;
 import com.google.gson.JsonObject;
 import org.bson.Document;
+import org.example.*;
+import org.example.domain.result.ResultadoBuscaCuidador;
+import org.example.domain.result.ResultadoBuscaIdoso;
+import org.example.domain.result.ResultadoLogin;
+import org.example.domain.result.ResultadoOperacao;
+import org.example.protocol.*;
+import org.example.domain.*;
+import org.example.domain.result.*;
+
 
 public class SupervisoraDeConexao extends Thread
 {
-    private Parceiro            usuario;
+    private Parceiro usuario;
     private Socket              conexao;
-    private ArrayList<Parceiro> usuarios;
+    private final ArrayList<Parceiro> usuarios;
     private Gson gson;
 
     public SupervisoraDeConexao
@@ -39,7 +49,7 @@ public class SupervisoraDeConexao extends Thread
                     new InputStreamReader(this.conexao.getInputStream(), StandardCharsets.UTF_8));
 
             this.usuario =
-                    new Parceiro (this.conexao,
+                    new Parceiro(this.conexao,
                             receptor,
                             transmissor);
 
@@ -92,7 +102,7 @@ public class SupervisoraDeConexao extends Thread
                         this.usuario.receba(new ResultadoOperacao(sucessoConexao, msg));
                         break;
 
-                        case "BuscarIdoso":
+                    case "BuscarIdoso":
                         PedidoBuscarIdoso pedidoBusca = gson.fromJson(json, PedidoBuscarIdoso.class);
                         String nomeEncontrado = pedidoBusca.procurarNomeNoBanco();
 
@@ -168,7 +178,7 @@ public class SupervisoraDeConexao extends Thread
                         this.usuario.receba(new ResultadoOperacao(confirmou, msgAlarme));
                         break;
 
-                        default:
+                    default:
                         System.err.println("Comunicado desconhecido: " + tipo);
                         break;
                 }

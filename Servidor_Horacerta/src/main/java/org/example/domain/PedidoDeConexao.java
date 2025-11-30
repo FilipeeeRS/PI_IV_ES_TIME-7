@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.google.gson.annotations.SerializedName;
 import com.mongodb.client.*;
@@ -6,6 +7,7 @@ import com.mongodb.client.model.Filters;
 import com.mongodb.client.model.Updates;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
+import org.example.protocol.ComunicadoJson;
 
 public class PedidoDeConexao extends ComunicadoJson {
 

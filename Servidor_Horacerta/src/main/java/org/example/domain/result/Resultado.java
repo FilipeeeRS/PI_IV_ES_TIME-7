@@ -1,6 +1,8 @@
-package org.example;
+package org.example.domain.result;
 
-public class Resultado extends Comunicado {
+import java.io.Serializable;
+
+public class Resultado implements Serializable {
     private static final long serialVersionUID = 1L;
 
     private final boolean sucesso;

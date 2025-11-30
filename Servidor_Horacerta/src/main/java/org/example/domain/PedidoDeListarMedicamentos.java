@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -8,6 +9,8 @@ import com.mongodb.client.model.Filters;
 // import io.github.cdimascio.dotenv.Dotenv; // <--- Comentei pra usar direto
 import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
+import org.example.protocol.ComunicadoJson;
+
 import java.util.ArrayList;
 import java.util.List;
 

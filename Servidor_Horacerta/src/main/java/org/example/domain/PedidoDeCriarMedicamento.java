@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -7,6 +8,7 @@ import com.mongodb.client.MongoDatabase;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
+import org.example.protocol.ComunicadoJson;
 
 public class PedidoDeCriarMedicamento extends ComunicadoJson {
     @SerializedName("nome")
@@ -21,7 +23,7 @@ public class PedidoDeCriarMedicamento extends ComunicadoJson {
     private String idUsuario;
 
     public PedidoDeCriarMedicamento() {
-      super("PedidoDeCriarMedicamento");
+        super("PedidoDeCriarMedicamento");
     }
 
     public String getNome(){ return this.nome ;}

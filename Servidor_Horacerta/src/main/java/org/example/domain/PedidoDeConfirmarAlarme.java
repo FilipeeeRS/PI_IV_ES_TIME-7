@@ -1,4 +1,4 @@
-package org.example;
+package org.example.domain;
 
 import com.google.gson.annotations.SerializedName;
 import com.mongodb.client.MongoClient;
@@ -9,6 +9,7 @@ import com.mongodb.client.result.UpdateResult;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.bson.conversions.Bson;
+import org.example.protocol.ComunicadoJson;
 
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;

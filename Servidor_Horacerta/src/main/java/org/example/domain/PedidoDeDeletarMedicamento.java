@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -8,8 +9,12 @@ import com.mongodb.client.result.DeleteResult;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.bson.types.ObjectId;
+import org.example.domain.result.ResultadoOperacao;
+import org.example.protocol.ComunicadoJson;
+
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
+
 
 public class PedidoDeDeletarMedicamento extends ComunicadoJson {
 
