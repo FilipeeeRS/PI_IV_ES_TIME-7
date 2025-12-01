@@ -2,7 +2,6 @@ package com.example.aplicativo_horacerta
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -27,29 +26,21 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.aplicativo_horacerta.network.Parceiro
-import com.example.aplicativo_horacerta.network.PedidoDeCadastro
+import com.example.aplicativo_horacerta.socket.NetworkService // <--- Import
+import com.example.aplicativo_horacerta.socket.UserRepository // <--- Import
 import com.google.firebase.auth.FirebaseAuth
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.Socket
 import androidx.lifecycle.lifecycleScope
 import org.json.JSONException
 import org.json.JSONObject
 
-
 class FazerRegistroActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
+
     private fun handleRegistration(nome: String, email: String, senha: String, profileType: String) {
-        // chama FIREBASE AUTH
+        // Cria usuário no Firebase
         auth.createUserWithEmailAndPassword(email, senha)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
@@ -59,26 +50,34 @@ class FazerRegistroActivity : ComponentActivity() {
                     if (firebaseUid != null) {
                         Toast.makeText(this, "Cadastro no Firebase OK. Enviando dados...", Toast.LENGTH_SHORT).show()
 
-                        // chama a rede com o UID
+                        // Chama a rede com o UID
                         lifecycleScope.launch {
-                            // O nome, email e profileType vêm da tela.
-                            createAccount(nome.trim(), email.trim(), firebaseUid, profileType) { result ->
-                                // Atualize a mensagem da UI
-                                try {
-                                    val jsonExterno = JSONObject(result)
-                                    val jsonInternoString = jsonExterno.getString("operacao")
-                                    val jsonInterno = JSONObject(jsonInternoString)
-                                    val sucesso = jsonInterno.getBoolean("resultado")
-                                    if (sucesso) {
-                                        val intent = Intent(this@FazerRegistroActivity, FazerLoginActivity::class.java)
-                                        startActivity(intent)
-                                        finish()
-                                    } else {
-                                        Toast.makeText(this@FazerRegistroActivity, "Falha: Usuário já existe", Toast.LENGTH_LONG).show()
-                                    }
-                                } catch (e: JSONException) {
-                                    Toast.makeText(this@FazerRegistroActivity, result, Toast.LENGTH_LONG).show()
+                            val userRepository = UserRepository(NetworkService())
+
+                            // O repository retorna a String bruta do servidor
+                            val result = userRepository.createAccount(nome.trim(), email.trim(), firebaseUid, profileType)
+
+                            // Processa a resposta (JSON)
+                            try {
+                                val jsonExterno = JSONObject(result)
+
+                                // O servidor manda dentro de "operacao"
+                                val jsonInternoString = jsonExterno.getString("operacao")
+                                val jsonInterno = JSONObject(jsonInternoString)
+
+                                // Verifica se deu certo
+                                val sucesso = jsonInterno.getBoolean("resultado")
+
+                                if (sucesso) {
+                                    Toast.makeText(this@FazerRegistroActivity, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
+                                    val intent = Intent(this@FazerRegistroActivity, FazerLoginActivity::class.java)
+                                    startActivity(intent)
+                                    finish()
+                                } else {
+                                    Toast.makeText(this@FazerRegistroActivity, "Falha: Usuário já existe ou erro no servidor.", Toast.LENGTH_LONG).show()
                                 }
+                            } catch (e: JSONException) {
+                                Toast.makeText(this@FazerRegistroActivity, "Erro ao processar resposta: $result", Toast.LENGTH_LONG).show()
                             }
                         }
                     } else {
@@ -101,44 +100,6 @@ class FazerRegistroActivity : ComponentActivity() {
                     },
                     onBackClick = { finish() }
                 )
-            }
-        }
-    }
-}
-
-suspend fun createAccount(
-    nome: String,
-    email: String,
-    firebaseUid: String,
-    profileType: String,
-    onResult: (String) -> Unit
-) {
-    val SERVER_IP = "10.0.116.3"
-    //val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-
-    val pedido = PedidoDeCadastro(nome, email, firebaseUid, profileType)
-
-    withContext(Dispatchers.IO) {
-        try {
-            val conexao = Socket(SERVER_IP, SERVER_PORT)
-            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream()))
-            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream()))
-            val servidor = Parceiro(conexao, receptor, transmissor)
-
-            servidor.receba(pedido)
-            val resposta: Any? = servidor.envie()
-            // Roda a rede em background
-            withContext(Dispatchers.Main) {
-                onResult(resposta.toString())
-            }
-
-            conexao.close()
-
-        } catch (e: Exception) {
-            e.printStackTrace()
-            withContext(Dispatchers.Main) {
-                onResult("Erro de conexão: ${e.message}")
             }
         }
     }
@@ -169,12 +130,6 @@ fun FazerRegistro(
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
-
-    var showVerificationDialog by remember { mutableStateOf(false) }
-
-    val context = LocalContext.current
-
-    val scope = rememberCoroutineScope()
 
     var passwordVisible by remember { mutableStateOf(false) }
     var confirmPasswordVisible by remember { mutableStateOf(false) }
@@ -423,11 +378,3 @@ fun FazerRegistro(
         }
     }
 }
-
-/*@Preview(showSystemUi = true, showBackground = true)
-@Composable
-fun PreviewFazerRegistro() {
-    Surface(color = Color.Black) {
-        FazerRegistro()
-    }
-}*/

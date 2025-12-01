@@ -1,9 +1,7 @@
 package com.example.aplicativo_horacerta
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
@@ -19,7 +17,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -28,17 +25,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import com.example.aplicativo_horacerta.network.*
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.aplicativo_horacerta.socket.MedicamentoRepository
 import com.google.firebase.auth.FirebaseAuth
-import com.google.gson.Gson
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -62,54 +52,6 @@ class HomeIdosoActivity : ComponentActivity() {
     }
 }
 
-suspend fun buscarDadosCuidador(): Pair<String, String>? {
-    val SERVER_IP = "10.0.116.3"
-    val SERVER_PORT = 3000
-    val gson = Gson()
-    val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return null
-
-    return withContext(Dispatchers.IO) {
-        var servidor: Parceiro? = null
-        try {
-            val conexao = Socket(SERVER_IP, SERVER_PORT)
-            servidor = Parceiro(conexao,
-                BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8)),
-                BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
-            )
-            servidor.receba(PedidoBuscarCuidador(emailIdoso))
-            val jsonString = servidor.envieJson()
-            val resultado = gson.fromJson(jsonString, ResultadoBuscaCuidador::class.java)
-
-            if (resultado.isEncontrou()) {
-                Pair(resultado.getNomeCuidador(), resultado.getUidCuidador())
-            } else {
-                null
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            null
-        } finally {
-            servidor?.adeus()
-        }
-    }
-}
-
-suspend fun sincronizarRemediosEAgendar(context: Context, uidCuidador: String) {
-    val resultadoLista = performListarMedicamentos(uidCuidador)
-    if (resultadoLista?.medicamentos != null) {
-        for (remedio in resultadoLista.medicamentos) {
-            AlarmeActivity.agendar(
-                context = context,
-                nome = remedio.nome,
-                dia = remedio.data,
-                horario = remedio.horario,
-                descricao = remedio.descricao,
-                idUsuario = uidCuidador
-            )
-        }
-    }
-}
-
 @Composable
 fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     val context = LocalContext.current
@@ -122,14 +64,18 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     // Função que carrega e filtra
     fun carregarDados() {
         scope.launch {
-            val dadosCuidador = buscarDadosCuidador()
+            // Busca cuidador usando o repositório
+            val dadosCuidador = MedicamentoRepository.buscarDadosCuidador()
 
             if (dadosCuidador != null) {
                 nomeCuidador = dadosCuidador.first
                 val uidCuidador = dadosCuidador.second
 
-                sincronizarRemediosEAgendar(context, uidCuidador)
-                val resultado = performListarMedicamentos(uidCuidador)
+                // Sincroniza alarme
+                MedicamentoRepository.sincronizarRemediosEAgendar(context, uidCuidador)
+
+                // Busca lista para mostrar na tela
+                val resultado = MedicamentoRepository.performListarMedicamentos(uidCuidador)
 
                 if (resultado?.medicamentos != null) {
                     listaRemediosFuturos.clear()

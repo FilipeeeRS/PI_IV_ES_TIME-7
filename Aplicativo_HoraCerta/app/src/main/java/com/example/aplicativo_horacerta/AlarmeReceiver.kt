@@ -17,14 +17,31 @@ import androidx.core.app.NotificationManagerCompat
 class AlarmeReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-        // "Acorda" cpu WAKELOCK, impede que o sistema durma
+
+        val prefs = context.getSharedPreferences("AuthPrefs", Context.MODE_PRIVATE)
+        val idLogado = prefs.getString("USER_UID", null)
+        val tipoPerfil = prefs.getString("PROFILE_TYPE", "")
+
+        Log.d("ALARME_CHECK", "Logado: $idLogado | Perfil: $tipoPerfil")
+
+        // Se ninguém estiver logado, não toca
+        if (idLogado.isNullOrBlank()) {
+            Log.w("ALARME_CHECK", "BLOQUEADO: Ninguém logado.")
+            return
+        }
+
+        // logado=cuidador não toca
+        if (tipoPerfil != "Idoso") {
+            Log.w("ALARME_CHECK", "BLOQUEADO: Usuário é Cuidador.")
+            return
+        }
+
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
             "HoraCerta:AlarmeWakelock"
         )
 
-        // 10 minutos
         wakeLock.acquire(10 * 60 * 1000L)
 
         try {
@@ -33,7 +50,6 @@ class AlarmeReceiver : BroadcastReceiver() {
             val nome = intent.getStringExtra("NOME_REMEDIO") ?: "Medicamento"
             val desc = intent.getStringExtra("DESCRICAO") ?: "Hora de tomar"
 
-            // Repassa todos as outras infos (IDs, horários, etc)
             val fullScreenIntent = Intent(context, AlarmeActivity::class.java).apply {
                 putExtras(intent)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -44,21 +60,19 @@ class AlarmeReceiver : BroadcastReceiver() {
 
             val pendingIntent = PendingIntent.getActivity(
                 context,
-                // Único para não confundir remédios
                 (nome + desc).hashCode(),
                 fullScreenIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // Tenta abrir a tela NA FORÇA BRUTA
+            // Tenta abrir a tela direto
             try {
                 context.startActivity(fullScreenIntent)
-                Log.d("ALARME", "StartActivity chamado com sucesso!")
             } catch (e: Exception) {
                 Log.e("ALARME", "Bloqueio de background: O Android preferiu a notificação.")
             }
 
-            // Canal de notificação com alta prioridade
+            // Notificação
             val channelId = "canal_alarme_v2"
             val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
@@ -76,7 +90,6 @@ class AlarmeReceiver : BroadcastReceiver() {
                 notificationManager.createNotificationChannel(channel)
             }
 
-            // Formato notificação "FULL SCREEN"
             val builder = NotificationCompat.Builder(context, channelId)
                 .setSmallIcon(android.R.drawable.ic_lock_idle_alarm)
                 .setContentTitle("HORA DO REMÉDIO: $nome")
@@ -88,19 +101,15 @@ class AlarmeReceiver : BroadcastReceiver() {
                 .setAutoCancel(true)
                 .setOngoing(true)
 
-            // Verificação de permissão para Android 13+ (POST_NOTIFICATIONS)
             if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
                 NotificationManagerCompat.from(context).notify(12345, builder.build())
             } else {
-                // Se não tiver permissão de notificação, tentamos abrir a Activity na força bruta de novo
                 context.startActivity(fullScreenIntent)
             }
-            Log.d("ALARME", "Notificação enviada com FullScreenIntent")
 
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
-            // Solta o WakeLock depois de 5 segundos
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 if (wakeLock.isHeld) wakeLock.release()
             }, 5000)

@@ -3,7 +3,6 @@ package com.example.aplicativo_horacerta
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
 import android.os.Bundle
-import android.util.Log
 import android.widget.DatePicker
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -32,18 +31,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.example.aplicativo_horacerta.network.ComunicadoJson
-import com.example.aplicativo_horacerta.network.Parceiro
-import com.example.aplicativo_horacerta.network.PedidoDeEditarMedicamento
-import com.google.gson.Gson
-import kotlinx.coroutines.Dispatchers
+import com.example.aplicativo_horacerta.socket.MedicamentoRepository
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.io.BufferedReader
-import java.io.BufferedWriter
-import java.io.InputStreamReader
-import java.io.OutputStreamWriter
-import java.net.Socket
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -85,7 +74,8 @@ class RemédioEditarActivity : ComponentActivity() {
                         }
 
                         lifecycleScope.launch {
-                            val resultado = performEditMedicamento(
+                            // Chamada ao Repositório
+                            val resultado = MedicamentoRepository.performEditMedicamento(
                                 idMedicamento = idMedicamento,
                                 nome = nome.takeIf { isNomeChanged } ?: "",
                                 dia = dia.takeIf { isDiaChanged } ?: "",
@@ -94,8 +84,10 @@ class RemédioEditarActivity : ComponentActivity() {
                                 idUsuario = idUsuarioLogado
                             )
 
-                            if (resultado?.isSucesso == true) {
+                            if (resultado.isSucesso) {
                                 Toast.makeText(this@RemédioEditarActivity, "Medicamento editado!", Toast.LENGTH_SHORT).show()
+
+                                // muda o alarme se mudou
                                 AlarmeActivity.agendar(
                                     context = this@RemédioEditarActivity,
                                     nome = nome,
@@ -107,48 +99,13 @@ class RemédioEditarActivity : ComponentActivity() {
                                 finish()
 
                             } else {
-                                Toast.makeText(this@RemédioEditarActivity, "Falha: ${resultado?.mensagem}", Toast.LENGTH_LONG).show()
+                                val msgErro = resultado.mensagem ?: "Erro desconhecido"
+                                Toast.makeText(this@RemédioEditarActivity, "Falha: $msgErro", Toast.LENGTH_LONG).show()
                             }
                         }
                     }
                 )
             }
-        }
-    }
-}
-
-suspend fun performEditMedicamento(idMedicamento: String, nome: String, dia: String, horario: String, descricao: String, idUsuario: String?): ResultadoOperacao? {
-    val SERVER_IP = "10.0.2.2"
-    val SERVER_PORT = 3000
-    val CODIFICACAO = Charsets.UTF_8
-    val pedido = PedidoDeEditarMedicamento(idMedicamento, nome, dia, horario, descricao, idUsuario)
-    val gson = Gson()
-
-    return withContext(Dispatchers.IO) {
-        var conexao: Socket? = null
-        try {
-            conexao = Socket(SERVER_IP, SERVER_PORT)
-            val transmissor = BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), CODIFICACAO))
-            val receptor = BufferedReader(InputStreamReader(conexao.getInputStream(), CODIFICACAO))
-            val servidor = Parceiro(conexao, receptor, transmissor)
-
-            servidor.receba(pedido)
-            transmissor.flush()
-            val respostaComunicado: Any? = servidor.envie()
-
-            if (respostaComunicado is ComunicadoJson) {
-                val wrapperJson = respostaComunicado.json
-                val wrapper = gson.fromJson(wrapperJson, WrapperResposta::class.java)
-                val resultadoFinal = gson.fromJson(wrapper.operacaoJsonString, ResultadoOperacao::class.java)
-                return@withContext resultadoFinal
-            } else {
-                return@withContext ResultadoOperacao(tipo="Erro", isSucesso=false, mensagem="Resposta inválida")
-            }
-        } catch (e: Exception) {
-            e.printStackTrace()
-            return@withContext ResultadoOperacao(tipo="Erro", isSucesso=false, mensagem="Erro: ${e.message}")
-        } finally {
-            conexao?.close()
         }
     }
 }
