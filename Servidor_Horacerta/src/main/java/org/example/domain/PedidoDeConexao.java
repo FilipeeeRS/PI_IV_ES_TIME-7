@@ -8,6 +8,7 @@ import com.mongodb.client.model.Updates;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.example.protocol.ComunicadoJson;
+import java.util.Objects;
 
 public class PedidoDeConexao extends ComunicadoJson {
 
@@ -29,7 +30,17 @@ public class PedidoDeConexao extends ComunicadoJson {
         this.emailIdoso = emailIdoso;
     }
 
-    // Método que faz a mágica no Banco (Seguindo o padrão do seu grupo)
+    // Construtor de copia
+    public PedidoDeConexao(PedidoDeConexao outro) {
+        // 1. Chama o construtor do pai (ComunicadoJson)
+        super(outro.getTipo());
+
+        // 2. Copia os campos chaves
+        this.emailCuidador = outro.emailCuidador;
+        this.emailIdoso = outro.emailIdoso;
+    }
+
+    // Métod0 que faz a mágica no Banco (Seguindo o padrão do seu grupo)
     public boolean realizarVinculo() {
         // Validações básicas
         if (emailCuidador == null || emailCuidador.isBlank() || emailIdoso == null || emailIdoso.isBlank()) {
@@ -94,5 +105,30 @@ public class PedidoDeConexao extends ComunicadoJson {
             e.printStackTrace();
             return false;
         }
+    }
+    @Override
+    public int hashCode() {
+        // Combina o hash do pai com os hash dos dois campos chaves.
+        return Objects.hash(super.hashCode(), emailCuidador, emailIdoso);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoDeConexao other = (PedidoDeConexao) obj;
+
+        // Compara os dois e-mails.
+        return Objects.equals(emailCuidador, other.emailCuidador) &&
+                Objects.equals(emailIdoso, other.emailIdoso);
+    }
+    @Override
+    public String toString() {
+        // Representação clara para logs.
+        return "PedidoDeConexao [Cuidador: " + emailCuidador + ", Vinculando Idoso: " + emailIdoso + "]";
     }
 }

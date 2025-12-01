@@ -10,7 +10,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.example.protocol.ComunicadoJson;
-
+import java.util.Objects;
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.set;
@@ -32,6 +32,17 @@ public class PedidoDeConfirmarAlarme extends ComunicadoJson {
 
     public PedidoDeConfirmarAlarme() {
         super("ConfirmarAlarme");
+    }
+
+    public PedidoDeConfirmarAlarme(PedidoDeConfirmarAlarme outro) {
+        // Chama o construtor do pai (ComunicadoJson)
+        super(outro.getTipo());
+
+        // Copia todos os campos
+        this.idUsuario = outro.idUsuario;
+        this.nomeRemedio = outro.nomeRemedio;
+        this.dia = outro.dia;
+        this.horario = outro.horario;
     }
 
     // Getters
@@ -80,5 +91,33 @@ public class PedidoDeConfirmarAlarme extends ComunicadoJson {
             e.printStackTrace();
             return false;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        // Combina o hash do pai com os hash dos quatro campos.
+        return Objects.hash(super.hashCode(), idUsuario, nomeRemedio, dia, horario);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        // Compara o pai primeiro
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoDeConfirmarAlarme other = (PedidoDeConfirmarAlarme) obj;
+
+        // Compara todos os quatro campos chaves.
+        return Objects.equals(idUsuario, other.idUsuario) &&
+                Objects.equals(nomeRemedio, other.nomeRemedio) &&
+                Objects.equals(dia, other.dia) &&
+                Objects.equals(horario, other.horario);
+    }
+    @Override
+    public String toString() {
+        return "PedidoDeConfirmarAlarme [Remédio: " + nomeRemedio + ", Dia: " + dia + ", Horário: " + horario + ", Usuário ID: " + idUsuario + "]";
     }
 }

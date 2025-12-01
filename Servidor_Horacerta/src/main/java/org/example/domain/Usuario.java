@@ -1,5 +1,6 @@
 package org.example.domain;
 
+import java.util.Objects;
 
 public class Usuario {
     private String _id;
@@ -33,5 +34,21 @@ public class Usuario {
                 ", nome='" + nome + '\'' +
                 ", tipo='" + tipo + '\'' +
                 '}';
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(_id, uid);
+    }
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        Usuario other = (Usuario) obj;
+
+        return Objects.equals(_id, other._id) &&
+                Objects.equals(uid, other.uid);
     }
 }

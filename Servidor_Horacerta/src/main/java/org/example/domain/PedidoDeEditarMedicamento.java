@@ -12,6 +12,7 @@ import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
 import org.example.protocol.ComunicadoJson;
+import java.util.Objects;
 
 // Importações estáticas necessárias para filtros e updates do MongoDB
 import static com.mongodb.client.model.Filters.and;
@@ -41,6 +42,20 @@ public class PedidoDeEditarMedicamento extends ComunicadoJson {
     public String getHorario() { return horario; }
     public String getDescricao() { return descricao; }
     public Boolean isTomou() { return tomou; }
+
+    public PedidoDeEditarMedicamento(PedidoDeEditarMedicamento outro) {
+        // 1. Chama o construtor do pai (ComunicadoJson)
+        super(outro.getTipo());
+
+        // 2. Copia todos os campos
+        this.idMedicamento = outro.idMedicamento;
+        this.idUsuario = outro.idUsuario;
+        this.nome = outro.nome;
+        this.dia = outro.dia;
+        this.horario = outro.horario;
+        this.descricao = outro.descricao;
+        this.tomou = outro.tomou;
+    }
 
     public boolean executar() {
         // Obter variáveis de ambiente
@@ -130,5 +145,41 @@ public class PedidoDeEditarMedicamento extends ComunicadoJson {
             e.printStackTrace();
         }
         return false;
+    }
+
+    @Override
+    public int hashCode() {
+        // Combina o hash do pai com os hash de todos os campos.
+        return Objects.hash(super.hashCode(), idMedicamento, idUsuario, nome, dia, horario, descricao, tomou);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        // Compara o pai primeiro
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoDeEditarMedicamento other = (PedidoDeEditarMedicamento) obj;
+
+        // Compara todos os campos de dados.
+        return Objects.equals(idMedicamento, other.idMedicamento) &&
+                Objects.equals(idUsuario, other.idUsuario) &&
+                Objects.equals(nome, other.nome) &&
+                Objects.equals(dia, other.dia) &&
+                Objects.equals(horario, other.horario) &&
+                Objects.equals(descricao, other.descricao) &&
+                Objects.equals(tomou, other.tomou);
+    }
+
+    @Override
+    public String toString() {
+        // Monta uma string clara para logs
+        return "PedidoDeEditarMedicamento [" +
+                "ID Medicamento: " + idMedicamento +
+                ", Usuário ID: " + idUsuario +
+                ", Novos Valores: {Nome: " + nome + ", Dia: " + dia + ", Tomou: " + tomou + "}]";
     }
 }

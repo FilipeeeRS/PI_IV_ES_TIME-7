@@ -6,7 +6,7 @@ import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import org.example.protocol.ComunicadoJson;
-
+import java.util.Objects;
 
 public class PedidoBuscarIdoso extends ComunicadoJson {
 
@@ -78,5 +78,32 @@ public class PedidoBuscarIdoso extends ComunicadoJson {
             e.printStackTrace();
             return null;
         }
+    }
+
+    @Override
+    public int hashCode() {
+        // Combina o hash do pai com o hash do campo de dados.
+        return Objects.hash(super.hashCode(), email);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        // Compara o pai primeiro
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoBuscarIdoso other = (PedidoBuscarIdoso) obj;
+
+        // Compara o campo de dados.
+        return Objects.equals(email, other.email);
+    }
+
+    @Override
+    public String toString() {
+        // Representação clara para logs.
+        return "PedidoBuscarIdoso [Email Alvo: " + email + "]";
     }
 }
