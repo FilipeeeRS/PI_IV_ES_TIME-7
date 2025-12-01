@@ -82,7 +82,7 @@ class HomeCuidadorActivity : ComponentActivity() {
         val prefs = getSharedPreferences(FazerLoginActivity.PREFS_NAME, Context.MODE_PRIVATE)
         prefs.edit().clear().apply()
 
-        val intent = Intent(this, FazerLoginActivity::class.java)
+        val intent = Intent(this, InicioTelaActivity::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
         startActivity(intent)
         finish()
