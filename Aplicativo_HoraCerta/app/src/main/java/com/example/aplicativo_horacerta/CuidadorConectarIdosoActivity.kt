@@ -259,7 +259,7 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                         val userRepository = UserRepository(NetworkService())
 
                                         // Realiza o vínculo no banco de dados
-                                        val resultado = userRepository.performConexao(emailIdoso, emailCuidador)
+                                        val resultado = userRepository.performConexao(emailCuidador, emailIdoso)
 
                                         isLoading = false
                                         val msg = resultado.mensagem ?: "Operação finalizada."
