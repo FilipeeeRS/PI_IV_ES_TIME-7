@@ -10,43 +10,44 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.ExitToApp
+import androidx.compose.material.icons.outlined.AddCircleOutline
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Info
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
-import kotlinx.coroutines.launch
-import androidx.compose.ui.platform.LocalContext
-import com.google.firebase.auth.FirebaseAuth
-import java.io.Serializable
-import java.text.SimpleDateFormat
-import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.outlined.AddCircleOutline
-import com.example.aplicativo_horacerta.FazerLoginActivity.Companion.KEY_USER_UID
-import com.google.gson.annotations.SerializedName
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.example.aplicativo_horacerta.FazerLoginActivity.Companion.KEY_USER_UID
 import com.example.aplicativo_horacerta.network.Comunicado
 import com.example.aplicativo_horacerta.socket.MedicamentoRepository
+import com.google.firebase.auth.FirebaseAuth
+import com.google.gson.annotations.SerializedName
+import kotlinx.coroutines.launch
+import java.io.Serializable
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class HomeCuidadorActivity : ComponentActivity() {
 
@@ -61,6 +62,7 @@ class HomeCuidadorActivity : ComponentActivity() {
             finish()
             return
         }
+
         setContent {
             Surface(color = Color.Black) {
                 HomeCuidador(
@@ -86,6 +88,8 @@ class HomeCuidadorActivity : ComponentActivity() {
         finish()
     }
 }
+
+// --- Data Classes ---
 
 data class Medicamento(
     val id: String,
@@ -114,6 +118,14 @@ data class HistoricoMedicamento(
     val horario: String
 )
 
+data class ResultadoOperacao(
+    @SerializedName("tipo") val tipo: String,
+    @SerializedName("sucesso") val isSucesso: Boolean,
+    @SerializedName("mensagem") val mensagem: String? = null
+) : Comunicado()
+
+// --- Composables ---
+
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun HomeCuidador(
@@ -122,38 +134,42 @@ fun HomeCuidador(
     onAccessibilityClick: () -> Unit = {},
     onLogoutClick: () -> Unit
 ) {
-
+    // Estados de UI
     val pagerState = rememberPagerState(initialPage = initialTabIndex) { 2 }
     var selectedTabIndex by remember { mutableIntStateOf(initialTabIndex) }
     val scope = rememberCoroutineScope()
-
-    val tabBarColor = Color(0xFFEEEEEE)
-    val contentColor = Color.White
-
-    LaunchedEffect(pagerState.currentPage) {
-        selectedTabIndex = pagerState.currentPage
-    }
-
     val context = LocalContext.current
+
+    // Listas de dados
     val medicamentosList = remember { mutableStateListOf<Medicamento>() }
     val historicoList = remember { mutableStateListOf<HistoricoMedicamento>() }
     val lifecycleOwner = LocalLifecycleOwner.current
 
+    val tabBarColor = Color(0xFFEEEEEE)
+    val contentColor = Color.White
+
+    // Sincroniza a aba selecionada com o pager
+    LaunchedEffect(pagerState.currentPage) {
+        selectedTabIndex = pagerState.currentPage
+    }
+
+    // Observer: Atualiza a lista sempre que a tela volta a ficar visível (Resume)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
                 if (userId != null) {
                     scope.launch {
-                        // Chamada ao Repositório
+                        // Busca dados no servidor/repositório
                         val resultado = MedicamentoRepository.performListarMedicamentos(userId)
 
                         if (resultado?.medicamentos != null) {
-                            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", java.util.Locale("pt", "BR"))
-                            val agora = java.util.Calendar.getInstance().time
+                            val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR"))
+                            val agora = Calendar.getInstance().time
 
                             medicamentosList.clear()
                             historicoList.clear()
 
+                            // Separa remédios futuros (Lista) de passados (Histórico)
                             val (futuros, passados) = resultado.medicamentos.partition { remedio ->
                                 try {
                                     val dataHoraRemedio = sdf.parse("${remedio.data} ${remedio.horario}")
@@ -163,10 +179,16 @@ fun HomeCuidador(
                                 }
                             }
 
+                            // Ordena e preenche a lista principal
                             medicamentosList.addAll(futuros.sortedBy {
-                                try { sdf.parse("${it.data} ${it.horario}") } catch(e:Exception) { null }
+                                try {
+                                    sdf.parse("${it.data} ${it.horario}")
+                                } catch (e: Exception) {
+                                    null
+                                }
                             })
 
+                            // Preenche o histórico
                             passados.forEach { remedioPassado ->
                                 historicoList.add(
                                     HistoricoMedicamento(
@@ -189,9 +211,11 @@ fun HomeCuidador(
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
     }
+
     Scaffold(
         topBar = {
             Column {
+                // Cabeçalho com Imagem e Logo
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -209,7 +233,6 @@ fun HomeCuidador(
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-
                         Icon(
                             painter = painterResource(id = R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo",
@@ -224,7 +247,6 @@ fun HomeCuidador(
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier.weight(1f)
                         )
-
                         IconButton(
                             onClick = onLogoutClick,
                             modifier = Modifier.align(Alignment.CenterVertically)
@@ -239,13 +261,13 @@ fun HomeCuidador(
                     }
                 }
 
+                // Abas de Navegação (Medicamentos / Histórico)
                 TabRow(
                     selectedTabIndex = selectedTabIndex,
                     containerColor = tabBarColor,
                     contentColor = Color.Black,
                     indicator = { tabPositions ->
                         val currentTabPosition = tabPositions[selectedTabIndex]
-
                         Box(
                             Modifier
                                 .fillMaxWidth()
@@ -309,10 +331,9 @@ fun HomeCuidador(
                 }
             }
         },
-
         floatingActionButtonPosition = FabPosition.Center
-
     ) { paddingValues ->
+        // Conteúdo das Abas
         HorizontalPager(
             state = pagerState,
             modifier = Modifier
@@ -329,7 +350,10 @@ fun HomeCuidador(
                             val usuarioId = userId ?: return@launch
 
                             // Chamada ao Repositório para Deletar
-                            val resultado = MedicamentoRepository.performDeleteMedicamento(medicamento.id, usuarioId)
+                            val resultado = MedicamentoRepository.performDeleteMedicamento(
+                                medicamento.id,
+                                usuarioId
+                            )
 
                             if (resultado.isSucesso) {
                                 medicamentosList.remove(medicamento)
@@ -341,18 +365,11 @@ fun HomeCuidador(
                         }
                     }
                 )
-                1 -> HistoricoTab(historicoList =  historicoList)
+                1 -> HistoricoTab(historicoList = historicoList)
             }
         }
     }
 }
-
-data class ResultadoOperacao(
-    @SerializedName("tipo") val tipo: String,
-    @SerializedName("sucesso") val isSucesso: Boolean,
-    @SerializedName("mensagem") val mensagem: String? = null
-) : Comunicado()
-
 
 @Composable
 fun MedicamentosTab(
@@ -466,16 +483,38 @@ fun MedicamentoItem(
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = medicamento.nome, fontWeight = FontWeight.Bold, fontSize = 18.sp)
+                Text(
+                    text = medicamento.nome,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp
+                )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Dia: ${medicamento.data}", fontSize = 14.sp, color = Color.Gray)
-                Text(text = "Horário: ${medicamento.horario}", fontSize = 14.sp, color = Color.Gray)
+                Text(
+                    text = "Dia: ${medicamento.data}",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Text(
+                    text = "Horário: ${medicamento.horario}",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
             }
             IconButton(onClick = onEditClick) {
-                Icon(Icons.Filled.Edit, contentDescription = "Editar", tint = Color.Gray, modifier = Modifier.size(28.dp))
+                Icon(
+                    imageVector = Icons.Filled.Edit,
+                    contentDescription = "Editar",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(28.dp)
+                )
             }
             IconButton(onClick = onDeleteClick) {
-                Icon(Icons.Filled.Delete, contentDescription = "Deletar", tint = Color.Gray, modifier = Modifier.size(28.dp))
+                Icon(
+                    imageVector = Icons.Filled.Delete,
+                    contentDescription = "Deletar",
+                    tint = Color.Gray,
+                    modifier = Modifier.size(28.dp)
+                )
             }
         }
     }
@@ -484,7 +523,10 @@ fun MedicamentoItem(
 @Composable
 fun HistoricoTab(historicoList: List<HistoricoMedicamento>) {
     if (historicoList.isEmpty()) {
-        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+            contentAlignment = Alignment.Center
+        ) {
             Text("Nenhum remédio no histórico.", color = Color.Gray)
         }
     }
@@ -519,11 +561,28 @@ fun HistoricoItem(historico: HistoricoMedicamento) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(text = historico.nome, fontWeight = FontWeight.Bold, fontSize = 18.sp, color = textColor)
+                Text(
+                    text = historico.nome,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 18.sp,
+                    color = textColor
+                )
                 Spacer(modifier = Modifier.height(4.dp))
-                Text(text = "Dia: ${historico.data}", fontSize = 14.sp, color = textColor)
-                Text(text = "Horário: ${historico.horario}", fontSize = 14.sp, color = textColor)
-                Text(text = statusText, fontSize = 14.sp, color = textColor)
+                Text(
+                    text = "Dia: ${historico.data}",
+                    fontSize = 14.sp,
+                    color = textColor
+                )
+                Text(
+                    text = "Horário: ${historico.horario}",
+                    fontSize = 14.sp,
+                    color = textColor
+                )
+                Text(
+                    text = statusText,
+                    fontSize = 14.sp,
+                    color = textColor
+                )
             }
             Icon(
                 imageVector = icon,

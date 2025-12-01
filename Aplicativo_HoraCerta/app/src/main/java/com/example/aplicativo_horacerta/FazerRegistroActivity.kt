@@ -18,7 +18,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
@@ -28,19 +27,24 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.aplicativo_horacerta.socket.NetworkService // <--- Import
-import com.example.aplicativo_horacerta.socket.UserRepository // <--- Import
+import androidx.lifecycle.lifecycleScope
+import com.example.aplicativo_horacerta.socket.NetworkService
+import com.example.aplicativo_horacerta.socket.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
-import androidx.lifecycle.lifecycleScope
 import org.json.JSONException
 import org.json.JSONObject
 
 class FazerRegistroActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
 
-    private fun handleRegistration(nome: String, email: String, senha: String, profileType: String) {
-        // Cria usuário no Firebase
+    private fun handleRegistration(
+        nome: String,
+        email: String,
+        senha: String,
+        profileType: String
+    ) {
+        // 1. Cria usuário no Firebase Auth
         auth.createUserWithEmailAndPassword(email, senha)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
@@ -48,43 +52,69 @@ class FazerRegistroActivity : ComponentActivity() {
                     val firebaseUid = user?.uid
 
                     if (firebaseUid != null) {
-                        Toast.makeText(this, "Cadastro no Firebase OK. Enviando dados...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            this,
+                            "Cadastro Completo. Enviando Dados...",
+                            Toast.LENGTH_SHORT
+                        ).show()
 
-                        // Chama a rede com o UID
+                        // 2. Envia dados para o Backend (Socket/API)
                         lifecycleScope.launch {
                             val userRepository = UserRepository(NetworkService())
 
                             // O repository retorna a String bruta do servidor
-                            val result = userRepository.createAccount(nome.trim(), email.trim(), firebaseUid, profileType)
+                            val result = userRepository.createAccount(
+                                nome.trim(),
+                                email.trim(),
+                                firebaseUid,
+                                profileType
+                            )
 
-                            // Processa a resposta (JSON)
+                            // 3. Processa a resposta JSON do servidor
                             try {
                                 val jsonExterno = JSONObject(result)
-
-                                // O servidor manda dentro de "operacao"
                                 val jsonInternoString = jsonExterno.getString("operacao")
                                 val jsonInterno = JSONObject(jsonInternoString)
 
-                                // Verifica se deu certo
                                 val sucesso = jsonInterno.getBoolean("resultado")
 
                                 if (sucesso) {
-                                    Toast.makeText(this@FazerRegistroActivity, "Conta criada com sucesso!", Toast.LENGTH_SHORT).show()
-                                    val intent = Intent(this@FazerRegistroActivity, FazerLoginActivity::class.java)
+                                    Toast.makeText(
+                                        this@FazerRegistroActivity,
+                                        "Conta Criada Com Sucesso!",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+
+                                    val intent = Intent(
+                                        this@FazerRegistroActivity,
+                                        FazerLoginActivity::class.java
+                                    )
                                     startActivity(intent)
                                     finish()
                                 } else {
-                                    Toast.makeText(this@FazerRegistroActivity, "Falha: Usuário já existe ou erro no servidor.", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(
+                                        this@FazerRegistroActivity,
+                                        "Falha: Usuário Já Existe Ou Erro No Servidor.",
+                                        Toast.LENGTH_LONG
+                                    ).show()
                                 }
                             } catch (e: JSONException) {
-                                Toast.makeText(this@FazerRegistroActivity, "Erro ao processar resposta: $result", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    this@FazerRegistroActivity,
+                                    "Erro Ao Processar Resposta: $result",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         }
                     } else {
-                        Toast.makeText(this, "Erro: UID não encontrado.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Erro: Usuario Não Encontrado.", Toast.LENGTH_LONG).show()
                     }
                 } else {
-                    Toast.makeText(this, "Falha no Registro: ${task.exception?.message}", Toast.LENGTH_LONG).show()
+                    Toast.makeText(
+                        this,
+                        "Falha no Registro: ${task.exception?.message}",
+                        Toast.LENGTH_LONG
+                    ).show()
                 }
             }
     }
@@ -111,33 +141,31 @@ fun FazerRegistro(
     onRegisterAttempt: (String, String, String, String) -> Unit,
     onBackClick: () -> Unit = {}
 ) {
-    // Preview
     val isInPreview = LocalInspectionMode.current
 
-    // Guardar o que o usuário digita
+    // Estados de input
     var name by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var message by remember { mutableStateOf("") }
 
-    // Estado do perfil
+    // Estados de controle e erro
+    var message by remember { mutableStateOf("") }
+    var passwordVisible by remember { mutableStateOf(false) }
+    var confirmPasswordVisible by remember { mutableStateOf(false) }
+
     val profileOptions = listOf("Cuidador", "Idoso")
     var selectedProfileIndex by remember { mutableStateOf<Int?>(null) }
-    var profileTypeError by remember { mutableStateOf<String?>(null) }
 
+    var profileTypeError by remember { mutableStateOf<String?>(null) }
     var nameError by remember { mutableStateOf<String?>(null) }
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var confirmPasswordError by remember { mutableStateOf<String?>(null) }
 
-    var passwordVisible by remember { mutableStateOf(false) }
-    var confirmPasswordVisible by remember { mutableStateOf(false) }
-
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -186,12 +214,14 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(25.dp))
 
+            // --- Seleção de Perfil ---
             Text(
                 text = "   Tipo de Perfil:",
                 color = Color.White,
                 fontSize = 16.sp,
                 modifier = Modifier.align(Alignment.Start)
             )
+
             SingleChoiceSegmentedButtonRow(
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -212,6 +242,7 @@ fun FazerRegistro(
                     }
                 }
             }
+
             if (profileTypeError != null) {
                 Text(
                     text = profileTypeError!!,
@@ -223,6 +254,7 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // --- Formulário de Cadastro ---
             TextField(
                 value = name,
                 onValueChange = { name = it },
@@ -271,10 +303,7 @@ fun FazerRegistro(
                 visualTransformation = if (passwordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    val image = if (passwordVisible)
-                        Icons.Filled.Visibility
-                    else Icons.Filled.VisibilityOff
-
+                    val image = if (passwordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     IconButton(onClick = { passwordVisible = !passwordVisible }) {
                         Icon(imageVector = image, "Mostrar/Esconder Senha")
                     }
@@ -301,10 +330,7 @@ fun FazerRegistro(
                 visualTransformation = if (confirmPasswordVisible) VisualTransformation.None else PasswordVisualTransformation(),
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
                 trailingIcon = {
-                    val image = if (confirmPasswordVisible)
-                        Icons.Filled.Visibility
-                    else Icons.Filled.VisibilityOff
-
+                    val image = if (confirmPasswordVisible) Icons.Filled.Visibility else Icons.Filled.VisibilityOff
                     IconButton(onClick = { confirmPasswordVisible = !confirmPasswordVisible }) {
                         Icon(imageVector = image, "Mostrar/Esconder Senha")
                     }
@@ -327,6 +353,7 @@ fun FazerRegistro(
                 onClick = {
                     var isValid = true
 
+                    // Validações
                     if (name.isBlank()) {
                         nameError = "Nome obrigatório"
                         isValid = false
@@ -357,7 +384,6 @@ fun FazerRegistro(
                         if (!isInPreview) {
                             val selectedProfile = profileOptions[selectedProfileIndex!!]
                             onRegisterAttempt(name.trim(), email.trim(), password, selectedProfile)
-
                         } else {
                             message = "Modo Preview: Firebase desativado."
                         }

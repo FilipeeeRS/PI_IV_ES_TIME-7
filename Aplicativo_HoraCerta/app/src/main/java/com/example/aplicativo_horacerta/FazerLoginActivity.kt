@@ -29,8 +29,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.lifecycleScope
-import com.example.aplicativo_horacerta.socket.NetworkService // <--- Import
-import com.example.aplicativo_horacerta.socket.UserRepository // <--- Import
+import com.example.aplicativo_horacerta.socket.NetworkService
+import com.example.aplicativo_horacerta.socket.UserRepository
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 
@@ -44,16 +44,35 @@ class FazerLoginActivity : ComponentActivity() {
         const val KEY_PROFILE_TYPE = "PROFILE_TYPE"
     }
 
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        auth = FirebaseAuth.getInstance()
+
+        checkIfAlreadyLoggedIn()
+
+        setContent {
+            Surface(color = Color.Black) {
+                FazerLogin(
+                    onLoginAttempt = { email, senha ->
+                        handleLogin(email, senha)
+                    },
+                    onBackClick = { finish() }
+                )
+            }
+        }
+    }
+
     private fun checkIfAlreadyLoggedIn() {
         val currentUser = auth.currentUser
         val prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
+        // Se existe sessão no Firebase E dados salvos localmente, entra direto
         if (currentUser != null && prefs.contains(KEY_PROFILE_TYPE)) {
             val uid = prefs.getString(KEY_USER_UID, null)
             val profileType = prefs.getString(KEY_PROFILE_TYPE, null)
 
             if (uid != null && profileType != null) {
-                Toast.makeText(this, "Sessão restaurada. Bem-vindo(a) de volta.", Toast.LENGTH_SHORT).show()
+                Toast.makeText(this, "Bem-vindo(a) de volta.", Toast.LENGTH_SHORT).show()
                 navigateToHome(uid, profileType)
             }
         }
@@ -77,7 +96,7 @@ class FazerLoginActivity : ComponentActivity() {
     }
 
     private fun handleLogin(email: String, senha: String) {
-
+        // 1. Autenticação no Firebase
         auth.signInWithEmailAndPassword(email.trim(), senha.trim())
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
@@ -85,36 +104,37 @@ class FazerLoginActivity : ComponentActivity() {
                     val firebaseUid = user?.uid
 
                     if (firebaseUid != null) {
-                        Toast.makeText(this, "Login Firebase OK. Buscando Perfil...", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(this, "Login Feito. Buscando Perfil...", Toast.LENGTH_SHORT).show()
 
                         lifecycleScope.launch {
-                            // Instancia o repositório (NetworkConfig)
+                            // 2. Consulta ao Backend (Socket/API) para pegar o Perfil
                             val userRepository = UserRepository(NetworkService())
-
-                            // Chama a função de login (suspensa)
                             val result = userRepository.doLogin(email.trim(), firebaseUid)
-
                             val context = this@FazerLoginActivity
 
+                            // 3. Processa a resposta do servidor
                             if (result.startsWith("SUCESSO")) {
-                                val parts = result.split(":")
+                                val parts = result.split(":") // Ex: SUCESSO:UID123:Cuidador
                                 if (parts.size >= 3) {
                                     val uid = parts[1]
                                     val profileType = parts[2]
 
+                                    // Salva sessão localmente
                                     val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                                     prefs.edit().apply {
                                         putString(KEY_USER_UID, uid)
                                         putString(KEY_PROFILE_TYPE, profileType)
                                         apply()
                                     }
-                                    Toast.makeText(context, "Login OK. Perfil: $profileType", Toast.LENGTH_LONG).show()
+
+                                    Toast.makeText(context, "Perfil: $profileType", Toast.LENGTH_LONG).show()
                                     navigateToHome(uid, profileType)
 
                                 } else {
-                                    Toast.makeText(context, "Erro: Resposta do servidor incompleta.", Toast.LENGTH_LONG).show()
+                                    Toast.makeText(context, "Erro: Falha Em Conexão Com O Servidor.", Toast.LENGTH_LONG).show()
                                 }
                             } else {
+                                // Tratamento de erros de conexão
                                 val errorMessage = when {
                                     result.contains("Connection refused") -> "Servidor offline. Verifique o IP no NetworkConfig."
                                     result.contains("host") -> "Erro de IP. O endereço do servidor está errado."
@@ -127,28 +147,12 @@ class FazerLoginActivity : ComponentActivity() {
                             }
                         }
                     } else {
-                        Toast.makeText(this, "Erro Firebase: UID não disponível.", Toast.LENGTH_LONG).show()
+                        Toast.makeText(this, "Erro: Usuario Não Encontrado.", Toast.LENGTH_LONG).show()
                     }
                 } else {
                     Toast.makeText(this, "Falha no Login: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                 }
             }
-    }
-
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
-        auth = FirebaseAuth.getInstance()
-        checkIfAlreadyLoggedIn()
-        setContent {
-            Surface(color = Color.Black) {
-                FazerLogin(
-                    onLoginAttempt = { email, senha ->
-                        handleLogin(email, senha)
-                    },
-                    onBackClick = { finish() }
-                )
-            }
-        }
     }
 }
 
@@ -159,9 +163,13 @@ fun FazerLogin(
     onBackClick: () -> Unit = {}
 ) {
     val isInPreview = LocalInspectionMode.current
+
+    // Estados do Formulário
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
+
+    // Estados de Erro e Mensagens
     var emailError by remember { mutableStateOf<String?>(null) }
     var passwordError by remember { mutableStateOf<String?>(null) }
     var message by remember { mutableStateOf("") }

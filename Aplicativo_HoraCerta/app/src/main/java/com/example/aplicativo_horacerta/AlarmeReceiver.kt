@@ -17,32 +17,32 @@ import androidx.core.app.NotificationManagerCompat
 class AlarmeReceiver : BroadcastReceiver() {
 
     override fun onReceive(context: Context, intent: Intent) {
-
+        // Recupera dados de login salvos
         val prefs = context.getSharedPreferences("AuthPrefs", Context.MODE_PRIVATE)
         val idLogado = prefs.getString("USER_UID", null)
         val tipoPerfil = prefs.getString("PROFILE_TYPE", "")
 
         Log.d("ALARME_CHECK", "Logado: $idLogado | Perfil: $tipoPerfil")
 
-        // Se ninguém estiver logado, não toca
+        // Validação: Só toca se houver usuário logado
         if (idLogado.isNullOrBlank()) {
             Log.w("ALARME_CHECK", "BLOQUEADO: Ninguém logado.")
             return
         }
 
-        // logado=cuidador não toca
+        // Regra de negócio: Cuidador não recebe o alarme sonoro, apenas o Idoso
         if (tipoPerfil != "Idoso") {
             Log.w("ALARME_CHECK", "BLOQUEADO: Usuário é Cuidador.")
             return
         }
 
+        // Wakelock: Garante que a CPU continue rodando para processar o alarme
         val powerManager = context.getSystemService(Context.POWER_SERVICE) as PowerManager
         val wakeLock = powerManager.newWakeLock(
             PowerManager.PARTIAL_WAKE_LOCK or PowerManager.ACQUIRE_CAUSES_WAKEUP,
             "HoraCerta:AlarmeWakelock"
         )
-
-        wakeLock.acquire(10 * 60 * 1000L)
+        wakeLock.acquire(10 * 60 * 1000L) // Mantém ativo por 10 min
 
         try {
             Log.d("ALARME", "Disparou! Tentando abrir tela...")
@@ -50,6 +50,7 @@ class AlarmeReceiver : BroadcastReceiver() {
             val nome = intent.getStringExtra("NOME_REMEDIO") ?: "Medicamento"
             val desc = intent.getStringExtra("DESCRICAO") ?: "Hora de tomar"
 
+            // Configura a Intent para abrir a tela cheia (AlarmeActivity)
             val fullScreenIntent = Intent(context, AlarmeActivity::class.java).apply {
                 putExtras(intent)
                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or
@@ -65,17 +66,19 @@ class AlarmeReceiver : BroadcastReceiver() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             )
 
-            // Tenta abrir a tela direto
+            // Tenta abrir a Activity imediatamente (funciona melhor em Androids antigos)
             try {
                 context.startActivity(fullScreenIntent)
             } catch (e: Exception) {
                 Log.e("ALARME", "Bloqueio de background: O Android preferiu a notificação.")
             }
 
-            // Notificação
+            // Configuração da Notificação
             val channelId = "canal_alarme_v2"
-            val notificationManager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            val notificationManager =
+                context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
+            // Cria canal de notificação (Obrigatório para Android 8+)
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 val channel = NotificationChannel(
                     channelId,
@@ -97,19 +100,26 @@ class AlarmeReceiver : BroadcastReceiver() {
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_ALARM)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setFullScreenIntent(pendingIntent, true)
+                .setFullScreenIntent(pendingIntent, true) // Tenta forçar tela cheia
                 .setAutoCancel(true)
                 .setOngoing(true)
 
-            if (ActivityCompat.checkSelfPermission(context, android.Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
+            // Exibe notificação se tiver permissão
+            if (ActivityCompat.checkSelfPermission(
+                    context,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) == PackageManager.PERMISSION_GRANTED
+            ) {
                 NotificationManagerCompat.from(context).notify(12345, builder.build())
             } else {
+                // Se não tiver permissão de notificação, força a abertura da tela
                 context.startActivity(fullScreenIntent)
             }
 
         } catch (e: Exception) {
             e.printStackTrace()
         } finally {
+            // Libera o Wakelock após 5 segundos para economizar bateria
             android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                 if (wakeLock.isHeld) wakeLock.release()
             }, 5000)

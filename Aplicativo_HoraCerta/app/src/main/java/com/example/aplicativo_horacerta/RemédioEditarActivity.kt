@@ -41,6 +41,7 @@ class RemédioEditarActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
         val idUsuarioLogado = intent.getStringExtra(FazerLoginActivity.KEY_USER_UID)
         val dadosDoRemedio = intent.getSerializableExtra("DADOS_MEDICAMENTO") as? Medicamento
 
@@ -63,6 +64,7 @@ class RemédioEditarActivity : ComponentActivity() {
 
                         if (idMedicamento.isBlank() || idUsuarioLogado.isBlank()) return@RemédioEditarScreen
 
+                        // Verifica quais campos foram realmente alterados
                         val isNomeChanged = nome != dadosDoRemedio.nome
                         val isDiaChanged = dia != dadosDoRemedio.data
                         val isHorarioChanged = horario != dadosDoRemedio.horario
@@ -74,7 +76,7 @@ class RemédioEditarActivity : ComponentActivity() {
                         }
 
                         lifecycleScope.launch {
-                            // Chamada ao Repositório
+                            // Envia apenas os dados alterados para o servidor
                             val resultado = MedicamentoRepository.performEditMedicamento(
                                 idMedicamento = idMedicamento,
                                 nome = nome.takeIf { isNomeChanged } ?: "",
@@ -85,9 +87,13 @@ class RemédioEditarActivity : ComponentActivity() {
                             )
 
                             if (resultado.isSucesso) {
-                                Toast.makeText(this@RemédioEditarActivity, "Medicamento editado!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@RemédioEditarActivity,
+                                    "Medicamento editado!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
 
-                                // muda o alarme se mudou
+                                // Atualiza o agendamento do alarme localmente
                                 AlarmeActivity.agendar(
                                     context = this@RemédioEditarActivity,
                                     nome = nome,
@@ -100,7 +106,11 @@ class RemédioEditarActivity : ComponentActivity() {
 
                             } else {
                                 val msgErro = resultado.mensagem ?: "Erro desconhecido"
-                                Toast.makeText(this@RemédioEditarActivity, "Falha: $msgErro", Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    this@RemédioEditarActivity,
+                                    "Falha: $msgErro",
+                                    Toast.LENGTH_LONG
+                                ).show()
                             }
                         }
                     }
@@ -113,9 +123,15 @@ class RemédioEditarActivity : ComponentActivity() {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RemédioEditarScreen(
-    idMedicamento: String, initialNome: String, initialDia: String, initialHorario: String, initialDescricao: String,
-    onBackClick: () -> Unit, onSaveClick: (String, String, String, String, String) -> Unit
+    idMedicamento: String,
+    initialNome: String,
+    initialDia: String,
+    initialHorario: String,
+    initialDescricao: String,
+    onBackClick: () -> Unit,
+    onSaveClick: (String, String, String, String, String) -> Unit
 ) {
+    // Estados do formulário
     var nome by remember { mutableStateOf(initialNome) }
     var dia by remember { mutableStateOf(initialDia) }
     var horario by remember { mutableStateOf(initialHorario) }
@@ -123,9 +139,12 @@ fun RemédioEditarScreen(
 
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
+
+    // Cores
     val titleBarColor = Color(0xFFEEEEEE)
     val fieldBackgroundColor = Color(0xFFF0F0F0)
 
+    // Configuração do DatePicker
     val datePickerDialog = DatePickerDialog(
         context,
         { _: DatePicker, y: Int, m: Int, d: Int ->
@@ -134,51 +153,207 @@ fun RemédioEditarScreen(
             val dateFormat = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
             dia = dateFormat.format(cal.time)
         },
-        calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
     )
 
+    // Configuração do TimePicker
     val timePickerDialog = TimePickerDialog(
         context,
         { _, h, m -> horario = String.format("%02d:%02d", h, m) },
-        calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
     )
 
     Scaffold(
         topBar = {
             Column {
-                Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
-                    Image(painter = painterResource(id = R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                    Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Image(painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.size(100.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_background),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            contentDescription = null,
+                            modifier = Modifier.size(100.dp)
+                        )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text("CUIDADOR", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "CUIDADOR",
+                            color = Color.White,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
-                Row(modifier = Modifier.fillMaxWidth().background(titleBarColor).padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
-                    Text("EDITAR MEDICAMENTO", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(titleBarColor)
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "EDITAR MEDICAMENTO",
+                        color = Color.Black,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
     ) { paddingValues ->
-        Column(modifier = Modifier.fillMaxSize().padding(paddingValues).background(Color.White).verticalScroll(rememberScrollState()).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            IconButton(onClick = onBackClick, modifier = Modifier.align(Alignment.Start)) { Icon(Icons.Filled.ArrowBack, "Voltar", modifier = Modifier.size(64.dp), tint = Color.Black) }
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+                .background(Color.White)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Voltar",
+                    modifier = Modifier.size(64.dp),
+                    tint = Color.Black
+                )
+            }
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextField(value = nome, onValueChange = { nome = it }, label = { Text("NOME:") }, singleLine = true, shape = RoundedCornerShape(8.dp), colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), modifier = Modifier.fillMaxWidth())
+            // Campo Nome
+            TextField(
+                value = nome,
+                onValueChange = { nome = it },
+                label = { Text("NOME:") },
+                singleLine = true,
+                shape = RoundedCornerShape(8.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextField(value = dia, onValueChange = { }, label = { Text("DIA:") }, singleLine = true, readOnly = true, shape = RoundedCornerShape(8.dp), colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), trailingIcon = { IconButton(onClick = { datePickerDialog.show() }) { Icon(Icons.Filled.DateRange, "Data", tint = Color.Black) } }, modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() })
+            // Campo Dia
+            TextField(
+                value = dia,
+                onValueChange = { },
+                label = { Text("DIA:") },
+                singleLine = true,
+                readOnly = true,
+                shape = RoundedCornerShape(8.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                trailingIcon = {
+                    IconButton(onClick = { datePickerDialog.show() }) {
+                        Icon(Icons.Filled.DateRange, "Data", tint = Color.Black)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { datePickerDialog.show() }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextField(value = horario, onValueChange = { }, label = { Text("HORÁRIO:") }, singleLine = true, readOnly = true, shape = RoundedCornerShape(8.dp), colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), trailingIcon = { IconButton(onClick = { timePickerDialog.show() }) { Icon(Icons.Filled.AccessTime, "Horário", tint = Color.Black) } }, modifier = Modifier.fillMaxWidth().clickable { timePickerDialog.show() })
+            // Campo Horário
+            TextField(
+                value = horario,
+                onValueChange = { },
+                label = { Text("HORÁRIO:") },
+                singleLine = true,
+                readOnly = true,
+                shape = RoundedCornerShape(8.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                trailingIcon = {
+                    IconButton(onClick = { timePickerDialog.show() }) {
+                        Icon(Icons.Filled.AccessTime, "Horário", tint = Color.Black)
+                    }
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { timePickerDialog.show() }
+            )
+
             Spacer(modifier = Modifier.height(16.dp))
 
-            TextField(value = descricao, onValueChange = { descricao = it }, label = { Text("DESCRIÇÃO:") }, singleLine = false, shape = RoundedCornerShape(8.dp), colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), modifier = Modifier.fillMaxWidth().height(150.dp))
+            // Campo Descrição
+            TextField(
+                value = descricao,
+                onValueChange = { descricao = it },
+                label = { Text("DESCRIÇÃO:") },
+                singleLine = false,
+                shape = RoundedCornerShape(8.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            )
+
             Spacer(modifier = Modifier.height(32.dp))
 
-            Box(modifier = Modifier.fillMaxWidth(0.8f).height(70.dp).clip(RoundedCornerShape(100.dp)).clickable { onSaveClick(idMedicamento, nome, dia, horario, descricao) }, contentAlignment = Alignment.Center) {
-                Image(painter = painterResource(id = R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                Text("CONFIRMAR", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            // Botão Confirmar
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(70.dp)
+                    .clip(RoundedCornerShape(100.dp))
+                    .clickable {
+                        onSaveClick(idMedicamento, nome, dia, horario, descricao)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_background),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Text(
+                    text = "CONFIRMAR",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }

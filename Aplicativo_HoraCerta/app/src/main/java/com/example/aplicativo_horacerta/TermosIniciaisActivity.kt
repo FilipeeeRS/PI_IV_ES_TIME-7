@@ -1,15 +1,14 @@
 package com.example.aplicativo_horacerta
 
 import android.content.Intent
-import androidx.compose.ui.tooling.preview.Preview
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -19,6 +18,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -26,24 +26,24 @@ class TermosIniciaisActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        // Verifica se os Termos já foram aceitos
+        // Verifica se os Termos já foram aceitos anteriormente
         val prefs = getSharedPreferences("prefs", MODE_PRIVATE)
         val onboardingDone = prefs.getBoolean("onboarding_done", false)
 
         if (onboardingDone) {
-            // Foi Aceito: continua
+            // Se já aceitou, pula direto para a tela de Início
             val intent = Intent(this, InicioTelaActivity::class.java)
             startActivity(intent)
             finish()
             return
         }
 
-        // Não foi aceito: mostra os termos
+        // Se não aceitou, exibe os termos
         setContent {
             Surface(color = Color.Black) {
                 TermosTela(
                     onAcceptClick = {
-                        // Salva a preferência
+                        // Salva a preferência de "Termos Aceitos"
                         prefs.edit().putBoolean("onboarding_done", true).apply()
 
                         val intent = Intent(this, InicioTelaActivity::class.java)
@@ -69,7 +69,7 @@ fun TermosTela(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
-
+        // --- Fundo ---
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -83,8 +83,10 @@ fun TermosTela(
                 .align(Alignment.TopStart)
                 .padding(horizontal = 16.dp, vertical = 32.dp)
         ) {
+            // Ícone opcional, se necessário
         }
 
+        // --- Conteúdo ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -113,12 +115,15 @@ fun TermosTela(
 
             Spacer(modifier = Modifier.height(20.dp))
 
+            // Caixa de Texto dos Termos
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(350.dp),
                 shape = RoundedCornerShape(24.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White.copy(alpha = 0.85f))
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White.copy(alpha = 0.85f)
+                )
             ) {
                 Text(
                     text = termosTexto(),
@@ -152,7 +157,6 @@ fun TermosTela(
     }
 }
 
-@Composable
 fun termosTexto(): String {
     return """
 O HoraCerta é um aplicativo que auxilia no controle de medicamentos, notificando horários e registrando confirmações de uso pelo idoso.

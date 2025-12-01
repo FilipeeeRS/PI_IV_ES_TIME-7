@@ -17,17 +17,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.Box
-import androidx.compose.ui.text.style.TextAlign
 
 class AcessibilidadeActivity : ComponentActivity() {
     private var profileType: String = "CUIDADOR"
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Recupera o tipo de perfil enviado pela Intent (Padrão: CUIDADOR)
         profileType = intent.getStringExtra("PERFIL_USUARIO") ?: "CUIDADOR"
+
         setContent {
             Surface(color = Color.Black) {
                 AcessibilidadeScreen(
@@ -111,7 +114,6 @@ fun AcessibilidadeScreen(
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-
             IconButton(
                 onClick = onBackClick,
                 modifier = Modifier.align(Alignment.Start)
@@ -139,7 +141,7 @@ fun AcessibilidadeScreen(
                         .fillMaxWidth(),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-
+                    // Renderiza o conteúdo específico baseado no perfil
                     when (profileType.uppercase()) {
                         "CUIDADOR" -> CuidadorAcessibilidadeContent()
                         "IDOSO" -> IdosoAcessibilidadeContent()
@@ -148,7 +150,7 @@ fun AcessibilidadeScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     Text(
-                        "Mais funcionalidades, serão adicionadas no futuro.",
+                        text = "Mais funcionalidades, serão adicionadas no futuro.",
                         fontSize = 18.sp,
                         color = Color.DarkGray,
                         textAlign = TextAlign.Center
@@ -161,10 +163,12 @@ fun AcessibilidadeScreen(
 
 @Composable
 fun CuidadorAcessibilidadeContent() {
+    // Conteúdo futuro para o Cuidador
 }
 
 @Composable
 fun IdosoAcessibilidadeContent() {
+    // Conteúdo futuro para o Idoso
 }
 
 @Preview(showSystemUi = true, showBackground = true, name = "Acessibilidade (Cuidador)")

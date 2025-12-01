@@ -61,35 +61,40 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     var nomeCuidador by remember { mutableStateOf("Buscando...") }
     val listaRemediosFuturos = remember { mutableStateListOf<Medicamento>() }
 
-    // Função que carrega e filtra
+    // Função auxiliar para recarregar dados
     fun carregarDados() {
         scope.launch {
-            // Busca cuidador usando o repositório
+            // 1. Busca vínculo com cuidador no banco
             val dadosCuidador = MedicamentoRepository.buscarDadosCuidador()
 
             if (dadosCuidador != null) {
                 nomeCuidador = dadosCuidador.first
                 val uidCuidador = dadosCuidador.second
 
-                // Sincroniza alarme
+                // 2. Garante que os alarmes do Android estejam agendados
                 MedicamentoRepository.sincronizarRemediosEAgendar(context, uidCuidador)
 
-                // Busca lista para mostrar na tela
+                // 3. Busca lista para mostrar na tela
                 val resultado = MedicamentoRepository.performListarMedicamentos(uidCuidador)
 
                 if (resultado?.medicamentos != null) {
                     listaRemediosFuturos.clear()
+
                     val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR"))
                     val agora = Calendar.getInstance().time
 
+                    // Filtra apenas remédios futuros e ordena por data
                     val filtrados = resultado.medicamentos.filter { remedio ->
                         try {
                             val dataRemedio = sdf.parse("${remedio.data} ${remedio.horario}")
                             dataRemedio != null && dataRemedio.after(agora)
-                        } catch (e: Exception) { false }
+                        } catch (e: Exception) {
+                            false
+                        }
                     }.sortedBy { remedio ->
                         sdf.parse("${remedio.data} ${remedio.horario}")
                     }
+
                     listaRemediosFuturos.addAll(filtrados)
                 }
             } else {
@@ -98,6 +103,7 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
         }
     }
 
+    // Atualiza os dados sempre que a tela entra em foco (Resume)
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) {
@@ -129,7 +135,6 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
                             .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-
                         Icon(
                             painter = painterResource(id = R.drawable.ic_launcher_foreground),
                             contentDescription = "Logo",
@@ -183,15 +188,37 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
 
             if (listaRemediosFuturos.isNotEmpty()) {
                 val proximo = listaRemediosFuturos[0]
-                CardProximoRemedio(nome = proximo.nome, horario = proximo.horario, dia = proximo.data)
+
+                CardProximoRemedio(
+                    nome = proximo.nome,
+                    horario = proximo.horario,
+                    dia = proximo.data
+                )
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Próximos na fila: ${listaRemediosFuturos.size - 1}", color = Color.Gray)
+
+                Text(
+                    text = "Próximos na fila: ${listaRemediosFuturos.size - 1}",
+                    color = Color.Gray
+                )
             } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top=50.dp)) {
-                    Text("Tudo em dia!", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.padding(top = 50.dp)
+                ) {
+                    Text(
+                        text = "Tudo em dia!",
+                        fontSize = 24.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Gray
+                    )
                     Spacer(modifier = Modifier.height(8.dp))
-                    Text("Você não tem remédios pendentes.", fontSize = 16.sp, color = Color.Gray, textAlign = TextAlign.Center)
+                    Text(
+                        text = "Você não tem remédios pendentes.",
+                        fontSize = 16.sp,
+                        color = Color.Gray,
+                        textAlign = TextAlign.Center
+                    )
                 }
             }
         }
@@ -201,20 +228,42 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
 @Composable
 fun CardProximoRemedio(nome: String, horario: String, dia: String) {
     Card(
-        modifier = Modifier.fillMaxWidth().height(300.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(300.dp),
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = Color(0xFFEEEEEE)),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxSize().padding(24.dp),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceAround
         ) {
-            Text("PRÓXIMO REMÉDIO", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(nome, fontSize = 40.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-            Text("Data: $dia", fontSize = 20.sp, fontWeight = FontWeight.Bold)
-            Text(horario, fontSize = 35.sp, color = Color.Red, fontWeight = FontWeight.Bold)
+            Text(
+                text = "PRÓXIMO REMÉDIO",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = nome,
+                fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = "Data: $dia",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Text(
+                text = horario,
+                fontSize = 35.sp,
+                color = Color.Red,
+                fontWeight = FontWeight.Bold
+            )
         }
     }
 }

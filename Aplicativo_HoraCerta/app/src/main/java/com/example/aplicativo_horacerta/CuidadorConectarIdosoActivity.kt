@@ -43,18 +43,23 @@ class CuidadorConectarIdosoActivity : ComponentActivity() {
 
 @Composable
 fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
+    // Estados da tela
     var emailIdoso by remember { mutableStateOf("") }
     var nomeEncontrado by remember { mutableStateOf<String?>(null) }
     var showConfirmacao by remember { mutableStateOf(false) }
+    var isLoading by remember { mutableStateOf(false) }
 
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
             Column {
-                Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                ) {
                     Image(
                         painter = painterResource(id = R.drawable.ic_launcher_background),
                         contentDescription = "Fundo",
@@ -62,7 +67,9 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                         contentScale = ContentScale.Crop
                     )
                     Row(
-                        modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp),
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
@@ -72,15 +79,28 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                             modifier = Modifier.size(100.dp)
                         )
                         Spacer(modifier = Modifier.width(16.dp))
-                        Text("CUIDADOR", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "CUIDADOR",
+                            color = Color.White,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
                 Row(
-                    modifier = Modifier.fillMaxWidth().background(Color(0xFFEEEEEE)).padding(vertical = 16.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFEEEEEE))
+                        .padding(vertical = 16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.Center
                 ) {
-                    Text("CONECTAR IDOSO", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "CONECTAR IDOSO",
+                        color = Color.Black,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -94,8 +114,16 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            IconButton(onClick = onBackClick, modifier = Modifier.align(Alignment.Start)) {
-                Icon(Icons.Filled.ArrowBack, "Voltar", modifier = Modifier.size(32.dp), tint = Color.Black)
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Voltar",
+                    modifier = Modifier.size(32.dp),
+                    tint = Color.Black
+                )
             }
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -105,12 +133,23 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFF0F0F0))
             ) {
-                Column(modifier = Modifier.fillMaxWidth().padding(24.dp), horizontalAlignment = Alignment.Start) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(24.dp),
+                    horizontalAlignment = Alignment.Start
+                ) {
 
-                    Text("ADICIONAR IDOSO", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
+                    Text(
+                        text = "ADICIONAR IDOSO",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 18.sp,
+                        color = Color.Black
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (!showConfirmacao) {
+                        // --- ESTADO DE BUSCA ---
                         TextField(
                             value = emailIdoso,
                             onValueChange = { emailIdoso = it },
@@ -118,7 +157,10 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Email),
                             modifier = Modifier.fillMaxWidth(),
                             enabled = !isLoading,
-                            colors = TextFieldDefaults.colors(focusedContainerColor = Color.White, unfocusedContainerColor = Color.White)
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.White,
+                                unfocusedContainerColor = Color.White
+                            )
                         )
 
                         Spacer(modifier = Modifier.height(24.dp))
@@ -128,42 +170,77 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                 if (emailIdoso.isNotBlank()) {
                                     isLoading = true
                                     scope.launch {
+                                        // Busca idoso na API
                                         val userRepository = UserRepository(NetworkService())
                                         val (encontrou, nome) = userRepository.buscarIdoso(emailIdoso)
 
                                         isLoading = false
                                         if (encontrou && nome != null) {
+                                            // Validação: Impede duplicidade de cuidadores
                                             if (nome.contains("(JÁ POSSUI CUIDADOR)")) {
-                                                Toast.makeText(context, "Este idoso já está sendo monitorado por alguém!", Toast.LENGTH_LONG).show()
+                                                Toast.makeText(
+                                                    context,
+                                                    "Este idoso já está sendo monitorado por alguém!",
+                                                    Toast.LENGTH_LONG
+                                                ).show()
                                             } else {
                                                 nomeEncontrado = nome
                                                 showConfirmacao = true
                                             }
                                         } else {
-                                            Toast.makeText(context, "Idoso não encontrado!", Toast.LENGTH_SHORT).show()
+                                            Toast.makeText(
+                                                context,
+                                                "Idoso não encontrado!",
+                                                Toast.LENGTH_SHORT
+                                            ).show()
                                         }
                                     }
                                 } else {
-                                    Toast.makeText(context, "Preencha o e-mail", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(
+                                        context,
+                                        "Preencha o e-mail",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
                                 }
                             },
                             enabled = !isLoading,
-                            modifier = Modifier.align(Alignment.CenterHorizontally).height(50.dp).width(150.dp),
+                            modifier = Modifier
+                                .align(Alignment.CenterHorizontally)
+                                .height(50.dp)
+                                .width(150.dp),
                             colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
                         ) {
-                            if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
-                            else Text("Buscar", fontSize = 18.sp)
+                            if (isLoading) {
+                                CircularProgressIndicator(
+                                    color = Color.White,
+                                    modifier = Modifier.size(24.dp)
+                                )
+                            } else {
+                                Text("Buscar", fontSize = 18.sp)
+                            }
                         }
                     } else {
-                        // Confirmação
+                        // --- ESTADO DE CONFIRMAÇÃO ---
                         Text("Encontramos:", fontSize = 14.sp, color = Color.Gray)
-                        Text(nomeEncontrado ?: "", fontSize = 22.sp, fontWeight = FontWeight.Bold, color = Color(0xFF4CAF50))
+                        Text(
+                            text = nomeEncontrado ?: "",
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF4CAF50)
+                        )
                         Spacer(modifier = Modifier.height(8.dp))
-                        Text("Deseja vincular-se a este idoso?", fontSize = 16.sp, color = Color.Black)
+                        Text(
+                            text = "Deseja vincular-se a este idoso?",
+                            fontSize = 16.sp,
+                            color = Color.Black
+                        )
 
                         Spacer(modifier = Modifier.height(24.dp))
 
-                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceEvenly
+                        ) {
                             Button(
                                 onClick = {
                                     showConfirmacao = false
@@ -181,6 +258,7 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                         val emailCuidador = FirebaseAuth.getInstance().currentUser?.email ?: return@launch
                                         val userRepository = UserRepository(NetworkService())
 
+                                        // Realiza o vínculo no banco de dados
                                         val resultado = userRepository.performConexao(emailIdoso, emailCuidador)
 
                                         isLoading = false
@@ -196,8 +274,14 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50)),
                                 modifier = Modifier.width(120.dp)
                             ) {
-                                if (isLoading) CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp))
-                                else Text("Confirmar")
+                                if (isLoading) {
+                                    CircularProgressIndicator(
+                                        color = Color.White,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                } else {
+                                    Text("Confirmar")
+                                }
                             }
                         }
                     }

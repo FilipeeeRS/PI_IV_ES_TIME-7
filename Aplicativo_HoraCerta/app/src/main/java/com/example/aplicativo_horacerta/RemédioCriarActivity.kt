@@ -48,34 +48,53 @@ class RemédioCriarActivity : ComponentActivity() {
                     onBackClick = { finish() },
                     onSaveClick = { nome, dia, horario, descricao ->
 
-                        // Validação
+                        // Validação de campos obrigatórios
                         if (nome.isBlank() || dia.isBlank() || horario.isBlank()) {
-                            Toast.makeText(this, "Preencha todos os campos obrigatórios!", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                this,
+                                "Preencha todos os campos obrigatórios!",
+                                Toast.LENGTH_SHORT
+                            ).show()
                             return@RemédioCriarScreen
                         }
 
-                        // Validação de Data Futura
+                        // Validação de Data Futura (lógica de negócio)
                         if (!isDataHorarioValido(dia, horario)) {
-                            Toast.makeText(this, "A data e horário devem ser no futuro!", Toast.LENGTH_LONG).show()
+                            Toast.makeText(
+                                this,
+                                "A data e horário devem ser no futuro!",
+                                Toast.LENGTH_LONG
+                            ).show()
                             return@RemédioCriarScreen
                         }
 
-                        // "Sem descrição" para não dar erro no servidor
+                        // Ajuste para evitar valor nulo/vazio no backend
                         val descricaoParaEnviar = if (descricao.isBlank()) "Sem descrição" else descricao
 
                         lifecycleScope.launch {
+                            // Salva no Servidor via Socket
                             val resultado = MedicamentoRepository.performCriarMedicamento(
-                                nome, dia, horario, descricaoParaEnviar, idUsuarioLogado
+                                nome,
+                                dia,
+                                horario,
+                                descricaoParaEnviar,
+                                idUsuarioLogado
                             )
 
-                            // Erro mostramos o erro técnico
                             if (resultado.contains("Erro", ignoreCase = true)) {
-                                Toast.makeText(this@RemédioCriarActivity, resultado, Toast.LENGTH_LONG).show()
+                                Toast.makeText(
+                                    this@RemédioCriarActivity,
+                                    resultado,
+                                    Toast.LENGTH_LONG
+                                ).show()
                             } else {
-                                // Em vez de mostrar o JSON, mostramos nossa mensagem:
-                                Toast.makeText(this@RemédioCriarActivity, "Medicamento criado com sucesso!", Toast.LENGTH_SHORT).show()
+                                Toast.makeText(
+                                    this@RemédioCriarActivity,
+                                    "Medicamento criado com sucesso!",
+                                    Toast.LENGTH_SHORT
+                                ).show()
 
-                                // Agenda o alarme e fecha a tela
+                                // Se salvou no servidor, agenda o alarme local
                                 if (idUsuarioLogado != null) {
                                     AlarmeActivity.agendar(
                                         context = this@RemédioCriarActivity,
@@ -96,6 +115,7 @@ class RemédioCriarActivity : ComponentActivity() {
     }
 }
 
+// Função auxiliar para validar se a data escolhida já passou
 fun isDataHorarioValido(dia: String, horario: String): Boolean {
     return try {
         val format = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR"))
@@ -109,7 +129,11 @@ fun isDataHorarioValido(dia: String, horario: String): Boolean {
 }
 
 @Composable
-fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, String, String) -> Unit) {
+fun RemédioCriarScreen(
+    onBackClick: () -> Unit,
+    onSaveClick: (String, String, String, String) -> Unit
+) {
+    // Estados do formulário
     var nome by remember { mutableStateOf("") }
     var dia by remember { mutableStateOf("") }
     var horario by remember { mutableStateOf("") }
@@ -117,7 +141,9 @@ fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, S
 
     val context = LocalContext.current
     val calendar = Calendar.getInstance()
+    val fieldBackgroundColor = Color(0xFFF0F0F0)
 
+    // Configuração do DatePicker
     val datePickerDialog = DatePickerDialog(
         context,
         { _, y, m, d ->
@@ -126,56 +152,197 @@ fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, S
             val format = SimpleDateFormat("dd/MM/yyyy", Locale("pt", "BR"))
             dia = format.format(cal.time)
         },
-        calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), calendar.get(Calendar.DAY_OF_MONTH)
+        calendar.get(Calendar.YEAR),
+        calendar.get(Calendar.MONTH),
+        calendar.get(Calendar.DAY_OF_MONTH)
     )
 
+    // Configuração do TimePicker
     val timePickerDialog = TimePickerDialog(
         context,
         { _, h, m -> horario = String.format("%02d:%02d", h, m) },
-        calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), true
+        calendar.get(Calendar.HOUR_OF_DAY),
+        calendar.get(Calendar.MINUTE),
+        true
     )
-    val fieldBackgroundColor = Color(0xFFF0F0F0)
 
     Scaffold(
         topBar = {
             Column {
-                Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
-                    Image(painter = painterResource(id = R.drawable.ic_launcher_background), contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
-                    Row(modifier = Modifier.fillMaxSize().padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Image(painter = painterResource(id = R.drawable.ic_launcher_foreground), contentDescription = null, modifier = Modifier.size(100.dp))
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_background),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize()
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            contentDescription = null,
+                            modifier = Modifier.size(100.dp)
+                        )
                         Spacer(Modifier.width(16.dp))
-                        Text("CUIDADOR", color = Color.White, fontSize = 30.sp, fontWeight = FontWeight.Bold)
+                        Text(
+                            text = "CUIDADOR",
+                            color = Color.White,
+                            fontSize = 30.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
                 }
-                Row(modifier = Modifier.fillMaxWidth().background(Color(0xFFEEEEEE)).padding(vertical = 16.dp), horizontalArrangement = Arrangement.Center) {
-                    Text("ADICIONAR MEDICAMENTO", color = Color.Black, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(Color(0xFFEEEEEE))
+                        .padding(vertical = 16.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    Text(
+                        text = "ADICIONAR MEDICAMENTO",
+                        color = Color.Black,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
     ) { padding ->
-        Column(modifier = Modifier.fillMaxSize().padding(padding).background(Color.White).verticalScroll(rememberScrollState()).padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            IconButton(onClick = onBackClick, modifier = Modifier.align(Alignment.Start)) {
-                Icon(Icons.Filled.ArrowBack, "Voltar", tint = Color.Black, modifier = Modifier.size(64.dp))
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding)
+                .background(Color.White)
+                .verticalScroll(rememberScrollState())
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.align(Alignment.Start)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.ArrowBack,
+                    contentDescription = "Voltar",
+                    tint = Color.Black,
+                    modifier = Modifier.size(64.dp)
+                )
             }
             Spacer(Modifier.height(16.dp))
 
-            TextField(value = nome, onValueChange = { nome = it }, label = { Text("NOME:") }, singleLine = true, colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), modifier = Modifier.fillMaxWidth())
+            // Campo NOME
+            TextField(
+                value = nome,
+                onValueChange = { nome = it },
+                label = { Text("NOME:") },
+                singleLine = true,
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                modifier = Modifier.fillMaxWidth()
+            )
             Spacer(Modifier.height(16.dp))
 
-            TextField(value = dia, onValueChange = {}, label = { Text("DIA:") }, readOnly = true, trailingIcon = { IconButton({ datePickerDialog.show() }) { Icon(Icons.Default.DateRange, null) } }, colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), modifier = Modifier.fillMaxWidth().clickable { datePickerDialog.show() })
+            // Campo DIA (Read-only + Picker)
+            TextField(
+                value = dia,
+                onValueChange = {},
+                label = { Text("DIA:") },
+                readOnly = true,
+                trailingIcon = {
+                    IconButton({ datePickerDialog.show() }) {
+                        Icon(Icons.Default.DateRange, null)
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { datePickerDialog.show() }
+            )
             Spacer(Modifier.height(16.dp))
 
-            TextField(value = horario, onValueChange = {}, label = { Text("HORÁRIO:") }, readOnly = true, trailingIcon = { IconButton({ timePickerDialog.show() }) { Icon(Icons.Default.AccessTime, null) } }, colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), modifier = Modifier.fillMaxWidth().clickable { timePickerDialog.show() })
+            // Campo HORÁRIO (Read-only + Picker)
+            TextField(
+                value = horario,
+                onValueChange = {},
+                label = { Text("HORÁRIO:") },
+                readOnly = true,
+                trailingIcon = {
+                    IconButton({ timePickerDialog.show() }) {
+                        Icon(Icons.Default.AccessTime, null)
+                    }
+                },
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { timePickerDialog.show() }
+            )
             Spacer(Modifier.height(16.dp))
 
-            TextField(value = descricao, onValueChange = { descricao = it }, label = { Text("DESCRIÇÃO:") }, singleLine = false, shape = RoundedCornerShape(8.dp), colors = TextFieldDefaults.colors(focusedContainerColor = fieldBackgroundColor, unfocusedContainerColor = fieldBackgroundColor, focusedTextColor = Color.Black, unfocusedTextColor = Color.Black), modifier = Modifier.fillMaxWidth().height(150.dp))
+            // Campo DESCRIÇÃO
+            TextField(
+                value = descricao,
+                onValueChange = { descricao = it },
+                label = { Text("DESCRIÇÃO:") },
+                singleLine = false,
+                shape = RoundedCornerShape(8.dp),
+                colors = TextFieldDefaults.colors(
+                    focusedContainerColor = fieldBackgroundColor,
+                    unfocusedContainerColor = fieldBackgroundColor,
+                    focusedTextColor = Color.Black,
+                    unfocusedTextColor = Color.Black
+                ),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+            )
             Spacer(Modifier.height(32.dp))
 
-            Box(modifier = Modifier.fillMaxWidth(0.8f).height(70.dp).clip(RoundedCornerShape(100.dp)).clickable {
-                onSaveClick(nome, dia, horario, descricao)
-            }, contentAlignment = Alignment.Center) {
-                Image(painter = painterResource(id = R.drawable.ic_launcher_background), contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                Text("CONFIRMAR", color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
+            // Botão Confirmar (Estilizado)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth(0.8f)
+                    .height(70.dp)
+                    .clip(RoundedCornerShape(100.dp))
+                    .clickable {
+                        onSaveClick(nome, dia, horario, descricao)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_launcher_background),
+                    contentDescription = null,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Text(
+                    text = "CONFIRMAR",
+                    color = Color.White,
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold
+                )
             }
         }
     }
@@ -184,5 +351,7 @@ fun RemédioCriarScreen(onBackClick: () -> Unit, onSaveClick: (String, String, S
 @Preview(showSystemUi = true)
 @Composable
 fun PreviewRemédioCriarScreen() {
-    Surface(color = Color.White) { RemédioCriarScreen(onBackClick = {}, onSaveClick = {_,_,_,_ ->}) }
+    Surface(color = Color.White) {
+        RemédioCriarScreen(onBackClick = {}, onSaveClick = { _, _, _, _ -> })
+    }
 }

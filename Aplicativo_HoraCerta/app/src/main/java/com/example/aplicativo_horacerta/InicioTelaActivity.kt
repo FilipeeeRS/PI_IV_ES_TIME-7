@@ -48,6 +48,7 @@ fun InicioTela(
     Box(
         modifier = Modifier.fillMaxSize()
     ) {
+        // --- Camada de Fundo ---
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -55,6 +56,7 @@ fun InicioTela(
             contentScale = ContentScale.Crop
         )
 
+        // --- Camada de Conteúdo ---
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -82,6 +84,7 @@ fun InicioTela(
 
             Spacer(modifier = Modifier.height(70.dp))
 
+            // Botão de Login
             Button(
                 onClick = onLoginClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
@@ -99,6 +102,7 @@ fun InicioTela(
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Botão de Registro
             Button(
                 onClick = onRegisterClick,
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
