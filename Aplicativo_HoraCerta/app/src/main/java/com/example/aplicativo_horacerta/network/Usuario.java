@@ -12,7 +12,7 @@ public class Usuario implements Serializable {
     private final String idMongoDB;
 
     @SerializedName("uid")
-    private final String firebaseUid; // O UID que você precisa
+    private final String firebaseUid;
 
     @SerializedName("nome")
     private final String nome;
@@ -21,9 +21,8 @@ public class Usuario implements Serializable {
     private final String email;
 
     @SerializedName("tipo")
-    private final String profileType; // O Tipo de Perfil (Cuidador/Idoso)
-
-
+    private final String profileType; // Cuidador/Idoso
+    
     public Usuario(String idMongoDB, String firebaseUid, String nome, String email, String profileType) {
         this.idMongoDB = idMongoDB;
         this.firebaseUid = firebaseUid;
@@ -31,7 +30,6 @@ public class Usuario implements Serializable {
         this.email = email;
         this.profileType = profileType;
     }
-
 
     public String getUid() { return firebaseUid; }
     public String getTipo() { return profileType; }

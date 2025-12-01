@@ -1,5 +1,10 @@
 package org.example;
 
+import org.example.connection.AceitadoraDeConexao;
+import org.example.connection.Parceiro;
+import org.example.protocol.ComunicadoDeDesligamento;
+import org.example.util.Teclado;
+
 import java.util.*;
 
 public class Servidor

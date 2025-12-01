@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -8,6 +9,8 @@ import com.mongodb.client.model.Filters;
 // import io.github.cdimascio.dotenv.Dotenv; // <--- Comentei pra usar direto
 import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
+import org.example.protocol.ComunicadoJson;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -33,14 +36,10 @@ public class PedidoDeListarMedicamentos extends ComunicadoJson {
                 throw new IllegalArgumentException("O ID do Usuário é obrigatório para listar os medicamentos.");
             }
 
-
             System.out.println("------------------------------------------------");
             System.out.println("[LISTAR] Recebi pedido para o ID: '" + this.idUsuario + "'");
             System.out.println("[LISTAR] Tamanho da string ID: " + this.idUsuario.length());
-            // Se o tamanho for maior que o texto parece, tem espaço escondido!
-            // ----------------------------------
 
-            // --- ALTERAÇÃO 2: LINK DIRETO (Igual fizemos na Busca) ---
             // Dotenv dotenv = Dotenv.load();
             // String uri = dotenv.get("MONGO_URI");
             String uri = "mongodb+srv://bestTeam:bestforever@cluster0.s3qlsah.mongodb.net/?retryWrites=true&w=majority&tls=true&appName=Cluster0";
@@ -50,7 +49,6 @@ public class PedidoDeListarMedicamentos extends ComunicadoJson {
                 MongoDatabase db = client.getDatabase(dbName);
                 MongoCollection<Document> col = db.getCollection("medicamentos");
 
-                // --- ALTERAÇÃO 3: USAR .trim() ---
                 // Remove espaços do começo e fim do ID antes de buscar
                 col.find(Filters.eq("idUsuario", this.idUsuario.trim()))
                         .into(medicamentosEncontrados);

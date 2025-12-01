@@ -12,21 +12,22 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExitToApp
-import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.platform.LocalContext
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.example.aplicativo_horacerta.network.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.gson.Gson
@@ -38,6 +39,9 @@ import java.io.BufferedWriter
 import java.io.InputStreamReader
 import java.io.OutputStreamWriter
 import java.net.Socket
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Locale
 
 class HomeIdosoActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,9 +62,8 @@ class HomeIdosoActivity : ComponentActivity() {
     }
 }
 
-// --- FUNÇÃO DE BUSCAR CUIDADOR ---
 suspend fun buscarDadosCuidador(): Pair<String, String>? {
-    val SERVER_IP = "10.0.2.2"
+    val SERVER_IP = "10.0.116.3"
     val SERVER_PORT = 3000
     val gson = Gson()
     val emailIdoso = FirebaseAuth.getInstance().currentUser?.email ?: return null
@@ -73,9 +76,7 @@ suspend fun buscarDadosCuidador(): Pair<String, String>? {
                 BufferedReader(InputStreamReader(conexao.getInputStream(), Charsets.UTF_8)),
                 BufferedWriter(OutputStreamWriter(conexao.getOutputStream(), Charsets.UTF_8))
             )
-
             servidor.receba(PedidoBuscarCuidador(emailIdoso))
-
             val jsonString = servidor.envieJson()
             val resultado = gson.fromJson(jsonString, ResultadoBuscaCuidador::class.java)
 
@@ -93,23 +94,15 @@ suspend fun buscarDadosCuidador(): Pair<String, String>? {
     }
 }
 
-// --- FUNÇÃO DE TESTE SEM DEPENDER DO AMIGO ---
-// --- FUNÇÃO PARA SINCRONIZAR ALARMES ---
 suspend fun sincronizarRemediosEAgendar(context: Context, uidCuidador: String) {
-    // 1. Reutiliza a função de listar que vocês já criaram para a HomeCuidador
-    // (Nota: Certifique-se que performListarMedicamentos está acessível aqui ou copie ela para cá)
     val resultadoLista = performListarMedicamentos(uidCuidador)
-
     if (resultadoLista?.medicamentos != null) {
-        Log.d("SYNC", "Encontrados ${resultadoLista.medicamentos.size} remédios. Agendando...")
-
-        // 2. Para cada remédio, chama o código do seu AMIGO
         for (remedio in resultadoLista.medicamentos) {
             AlarmeActivity.agendar(
                 context = context,
                 nome = remedio.nome,
-                dia = remedio.data,       // Ajuste se o nome do campo for diferente
-                horario = remedio.horario, // Formato esperado "14:30"
+                dia = remedio.data,
+                horario = remedio.horario,
                 descricao = remedio.descricao,
                 idUsuario = uidCuidador
             )
@@ -120,74 +113,116 @@ suspend fun sincronizarRemediosEAgendar(context: Context, uidCuidador: String) {
 @Composable
 fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
     val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val scope = rememberCoroutineScope()
+
     var nomeCuidador by remember { mutableStateOf("Buscando...") }
+    val listaRemediosFuturos = remember { mutableStateListOf<Medicamento>() }
 
-    // Lista de remédios para mostrar na tela
-    val listaRemedios = remember { mutableStateListOf<Medicamento>() }
+    // Função que carrega e filtra
+    fun carregarDados() {
+        scope.launch {
+            val dadosCuidador = buscarDadosCuidador()
 
-    LaunchedEffect(Unit) {
-        // 1. Descobre quem cuida de mim
-        val dadosCuidador = buscarDadosCuidador()
+            if (dadosCuidador != null) {
+                nomeCuidador = dadosCuidador.first
+                val uidCuidador = dadosCuidador.second
 
-        if (dadosCuidador != null) {
-            nomeCuidador = dadosCuidador.first // Nome
-            val uidCuidador = dadosCuidador.second // ID
+                sincronizarRemediosEAgendar(context, uidCuidador)
+                val resultado = performListarMedicamentos(uidCuidador)
 
-            // 2. Simula o agendamento (Logs no console)
-            sincronizarRemediosEAgendar(context, uidCuidador)
+                if (resultado?.medicamentos != null) {
+                    listaRemediosFuturos.clear()
+                    val sdf = SimpleDateFormat("dd/MM/yyyy HH:mm", Locale("pt", "BR"))
+                    val agora = Calendar.getInstance().time
 
-            // 3. Atualiza a lista visual na tela
-            val resultado = performListarMedicamentos(uidCuidador)
-            if (resultado?.medicamentos != null) {
-                listaRemedios.clear()
-                listaRemedios.addAll(resultado.medicamentos)
+                    val filtrados = resultado.medicamentos.filter { remedio ->
+                        try {
+                            val dataRemedio = sdf.parse("${remedio.data} ${remedio.horario}")
+                            dataRemedio != null && dataRemedio.after(agora)
+                        } catch (e: Exception) { false }
+                    }.sortedBy { remedio ->
+                        sdf.parse("${remedio.data} ${remedio.horario}")
+                    }
+                    listaRemediosFuturos.addAll(filtrados)
+                }
+            } else {
+                nomeCuidador = "Nenhum vínculo"
             }
-        } else {
-            nomeCuidador = "Nenhum vínculo"
         }
+    }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                carregarDados()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     Scaffold(
         topBar = {
-            Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
-                Image(
-                    painter = painterResource(id = R.drawable.ic_launcher_background),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Crop
-                )
-
-                // LAYOUT CORRIGIDO PARA O BOTÃO NÃO SUMIR
-                Row(
-                    modifier = Modifier.fillMaxSize().padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            Column {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(130.dp)
                 ) {
-                    // Texto com peso (weight) para ocupar espaço mas deixar sobrar pro botão
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            "IDOSO",
-                            color = Color.White,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            "Cuidador: $nomeCuidador",
-                            color = Color.White,
-                            fontSize = 14.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis // Põe "..." se for muito grande
-                        )
-                    }
+                    Image(
+                        painter = painterResource(id = R.drawable.ic_launcher_background),
+                        contentDescription = "Fundo do Cabeçalho",
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Crop
+                    )
 
-                    // Botão Logout fixo na direita
-                    IconButton(onClick = onLogoutClick) {
-                        Icon(Icons.Filled.ExitToApp, "Sair", tint = Color.White, modifier = Modifier.size(32.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+
+                        Icon(
+                            painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                            contentDescription = "Logo",
+                            tint = Color.White,
+                            modifier = Modifier.size(100.dp)
+                        )
+
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "IDOSO",
+                                color = Color.White,
+                                fontSize = 30.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                            Text(
+                                text = "Cuidador: $nomeCuidador",
+                                color = Color.White.copy(alpha = 0.9f),
+                                fontSize = 14.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        IconButton(
+                            onClick = onLogoutClick,
+                            modifier = Modifier.align(Alignment.CenterVertically)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ExitToApp,
+                                contentDescription = "Sair",
+                                tint = Color.White,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
             }
-        },
-        floatingActionButton = {
-            // ... (Seu FAB)
         }
     ) { paddingValues ->
         Column(
@@ -198,16 +233,20 @@ fun HomeIdosoScreen(onLogoutClick: () -> Unit = {}) {
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
+            Spacer(modifier = Modifier.height(20.dp))
 
-            if (listaRemedios.isNotEmpty()) {
-                // Pega o primeiro remédio da lista para exibir no card grande
-                val proximo = listaRemedios[0]
+            if (listaRemediosFuturos.isNotEmpty()) {
+                val proximo = listaRemediosFuturos[0]
                 CardProximoRemedio(nome = proximo.nome, horario = proximo.horario, dia = proximo.data)
 
                 Spacer(modifier = Modifier.height(16.dp))
-                Text("Total agendados: ${listaRemedios.size}", color = Color.Gray)
+                Text("Próximos na fila: ${listaRemediosFuturos.size - 1}", color = Color.Gray)
             } else {
-                Text("Nenhum remédio agendado", fontSize = 20.sp, color = Color.Gray)
+                Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(top=50.dp)) {
+                    Text("Tudo em dia!", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = Color.Gray)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text("Você não tem remédios pendentes.", fontSize = 16.sp, color = Color.Gray, textAlign = TextAlign.Center)
+                }
             }
         }
     }
@@ -226,10 +265,10 @@ fun CardProximoRemedio(nome: String, horario: String, dia: String) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceAround
         ) {
-            Text("PRÓXIMO REMÉDIO", fontSize = 24.sp, fontWeight = FontWeight.Bold)
-            Text(nome, fontSize = 40.sp, fontWeight = FontWeight.Bold)
-            Text(dia, fontSize = 20.sp)
-            Text(horario, fontSize = 20.sp, color = Color.Red, fontWeight = FontWeight.Bold)
+            Text("PRÓXIMO REMÉDIO", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(nome, fontSize = 40.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+            Text("Data: $dia", fontSize = 20.sp, fontWeight = FontWeight.Bold)
+            Text(horario, fontSize = 35.sp, color = Color.Red, fontWeight = FontWeight.Bold)
         }
     }
 }

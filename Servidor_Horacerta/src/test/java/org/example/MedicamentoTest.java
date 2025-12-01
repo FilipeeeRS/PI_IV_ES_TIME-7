@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.domain.Medicamento;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -82,5 +83,16 @@ class MedicamentoTest {
         // Sequência 3: setTomou(false) -> isTomou()
         medicamentoPadrao.setTomou(false);
         assertFalse(medicamentoPadrao.isTomou(), "O status deve voltar para false.");
+    }
+    @Test
+    @DisplayName("Teste de Falha SIMULADA: Setar nome como null deve ser possível, expondo o risco de NPE")
+    void testeFalhaSimulada_setNomeComNull() {
+        // 1. Simula a chamada do setter com o valor problemático (null)
+        medicamentoPadrao.setNome(null);
+
+        // 2. Verifica se o valor realmente foi definido como null (confirmando a falta de validação)
+        assertNull(medicamentoPadrao.getNome(), "O setter falhou em validar e permitiu um valor nulo.");
+
+        // (O NullPointerException real ocorreria em um método posterior, como um .toString() ou na serialização)
     }
 }

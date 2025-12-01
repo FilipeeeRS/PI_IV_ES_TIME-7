@@ -11,7 +11,7 @@ public class PedidoDeConexao extends ComunicadoJson {
     private String emailIdoso;
 
     public PedidoDeConexao(String emailCuidador, String emailIdoso) {
-        super("ConectarIdoso"); // Essa tag deve bater com o 'case' do switch no Servidor
+        super("ConectarIdoso");
         this.emailCuidador = emailCuidador;
         this.emailIdoso = emailIdoso;
     }

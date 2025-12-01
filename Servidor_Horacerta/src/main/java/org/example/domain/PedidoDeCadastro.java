@@ -1,9 +1,12 @@
-package org.example;
+package org.example.domain;
+
 
 import com.google.gson.annotations.SerializedName;
 import io.github.cdimascio.dotenv.Dotenv;
 import com.mongodb.client.*;
 import org.bson.Document;
+import org.example.protocol.ComunicadoJson;
+
 
 public class PedidoDeCadastro extends ComunicadoJson {
 
@@ -63,7 +66,6 @@ public class PedidoDeCadastro extends ComunicadoJson {
                     System.err.println("Erro: UID do Firebase já cadastrado.");
                     return false;
                 }
-
 
                 Document doc = new Document("firebase_uid", this.firebaseUid)
                         .append("nome", nome)

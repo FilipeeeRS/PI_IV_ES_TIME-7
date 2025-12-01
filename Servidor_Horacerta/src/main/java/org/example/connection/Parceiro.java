@@ -1,18 +1,18 @@
-package org.example;
+package org.example.connection;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.net.Socket;
 import com.google.gson.Gson;
-
+import org.example.domain.result.ResultadoOperacao;
+import org.example.protocol.*;
 
 public class Parceiro {
     private final Socket conexao;
     private final BufferedReader receptor;
     private final BufferedWriter transmissor;
     private final Gson gson = new Gson();
-
 
     private String proximoJson = null;
 
@@ -25,23 +25,20 @@ public class Parceiro {
         this.transmissor = transmissor;
     }
 
-
-    public void receba(Comunicado x) throws Exception {
+    public void receba(ComunicadoJson x) throws Exception {
         try {
             String json = gson.toJson(x);
             transmissor.write(json);
-            transmissor.write("\n");   // MUITO importante p/ readLine() do cliente
+            transmissor.write("\n");
             transmissor.flush();
         } catch (IOException e) {
             throw new Exception("Erro de transmissao: " + e.getMessage(), e);
         }
     }
 
-
-
     public Comunicado envie() throws Exception {
         try {
-            if (proximoJson == null) proximoJson = receptor.readLine(); // bloqueia até chegar \n
+            if (proximoJson == null) proximoJson = receptor.readLine(); // bloqueia até chegar
             if (proximoJson == null) throw new Exception("Conexao encerrada pelo cliente");
 
             String json = proximoJson;
@@ -52,7 +49,7 @@ public class Parceiro {
         }
     }
 
-    /** Fecha streams e socket (tenta flush antes) */
+    // Fecha streams e socket (tenta flush antes)
     public void adeus() throws Exception {
         try {
             try { transmissor.flush(); } catch (Exception ignored) {}

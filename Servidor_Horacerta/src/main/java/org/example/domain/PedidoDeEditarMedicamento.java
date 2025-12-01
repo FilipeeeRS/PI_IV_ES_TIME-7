@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -10,6 +11,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.bson.conversions.Bson;
 import org.bson.types.ObjectId;
+import org.example.protocol.ComunicadoJson;
 
 // Importações estáticas necessárias para filtros e updates do MongoDB
 import static com.mongodb.client.model.Filters.and;
@@ -17,26 +19,21 @@ import static com.mongodb.client.model.Filters.eq;
 import static com.mongodb.client.model.Updates.combine;
 import static com.mongodb.client.model.Updates.set;
 
-// Assumindo que ComunicadoJson é uma classe base
 public class PedidoDeEditarMedicamento extends ComunicadoJson {
 
-    // 🚨 CORREÇÃO 1: Renomeado o campo para idMedicamento para bater com o cliente.
-    private String idMedicamento; // ID do MongoDB (o que o cliente envia)
-    private String idUsuario; // ID do usuário para segurança
+    private String idMedicamento;
+    private String idUsuario;
     private String nome;
     private String dia;
     private String horario;
     private String descricao;
-    private Boolean tomou; // Usar Boolean (wrapper) para permitir null se não for enviado
+    private Boolean tomou;
 
     public PedidoDeEditarMedicamento() {
         super("PedidoDeEditarMedicamento");
     }
 
-    /**
-     * Getters necessários para que o GSON (ou outro serializador)
-     * possa preencher os campos privados.
-     */
+    //Getters para que o GSON
     public String getIdMedicamento() { return idMedicamento; }
     public String getIdUsuario() { return idUsuario; }
     public String getNome() { return nome; }
@@ -45,22 +42,19 @@ public class PedidoDeEditarMedicamento extends ComunicadoJson {
     public String getDescricao() { return descricao; }
     public Boolean isTomou() { return tomou; }
 
-
-    // 🚨 O método executar deve retornar um Comunicado. Assumindo que o retorno booleano
-    // é um simplificação, aqui ele retorna um boolean para seguir seu código.
     public boolean executar() {
-        // Obter variáveis de ambiente (MELHORIA: Mover esta lógica para um Singleton de conexão)
+        // Obter variáveis de ambiente
         Dotenv dotenv = Dotenv.load();
         String uri = dotenv.get("MONGO_URI");
         String dbName = dotenv.get("MONGO_DATABASE", "sample_horacerta");
 
-        // 🚨 Validação inicial para evitar a exceção 'hexString can not be null'
+        // Validação inicial
         if (this.idMedicamento == null || this.idMedicamento.isBlank()) {
             System.err.println("[ERRO] Pedido de Edição sem ID do Medicamento. Recebido: " + this.idMedicamento);
             return false;
         }
 
-        // 🚨 Validação de segurança: o usuário deve ser fornecido
+        // Validação de segurança
         if (this.idUsuario == null || this.idUsuario.isBlank()) {
             System.err.println("[ERRO] Pedido de Edição sem ID do Usuário. Recebido: " + this.idUsuario);
             return false;
@@ -70,16 +64,16 @@ public class PedidoDeEditarMedicamento extends ComunicadoJson {
             MongoDatabase db = client.getDatabase(dbName);
             MongoCollection<Document> collection = db.getCollection("medicamentos");
 
-            // Tenta converter o ID do medicamento para ObjectId
+            // Converte o ID do medicamento para ObjectId
             ObjectId objectId = new ObjectId(this.idMedicamento);
 
-            // 1. Define o FILTRO de segurança: Id do medicamento E Id do usuário
+            // Define o FILTRO de segurança: Id do medicamento E Id do usuário
             Bson filtro = and(
                     eq("_id", objectId),
                     eq("idUsuario", this.idUsuario)
             );
 
-            // 2. 🚨 CORREÇÃO 2: Constrói o UPDATE dinamicamente, ignorando campos nulos ou vazios
+            // Constrói UPDATE, ignorando campos vazios
             java.util.List<Bson> updates = new java.util.ArrayList<>();
 
             if (nome != null && !nome.isBlank()) {
@@ -95,12 +89,12 @@ public class PedidoDeEditarMedicamento extends ComunicadoJson {
                 updates.add(set("descricao", this.descricao));
             }
 
-            // O campo 'tomou' (boolean) deve ser tratado separadamente se for enviado
+            // O campo tomou é tratado separado
             if (this.tomou != null) {
                 updates.add(set("tomou", this.tomou));
             }
 
-            // Se não houver nenhum campo para atualizar, falha a edição.
+            // Se não houver nenhum campo para atualizar, falha
             if (updates.isEmpty()) {
                 System.err.println("[MEDICAMENTO] Falha ao editar. Nenhum campo válido fornecido para atualização.");
                 return false;
@@ -109,16 +103,16 @@ public class PedidoDeEditarMedicamento extends ComunicadoJson {
             // Combina os updates válidos
             Bson update = combine(updates);
 
-            // 3. Executa a edição
+            // Executa a edição
             UpdateResult result = collection.updateOne(filtro, update);
 
             if (result.getMatchedCount() > 0) {
                 if (result.getModifiedCount() > 0) {
                     System.out.println("[MEDICAMENTO] Editado com sucesso. ID: " + this.idMedicamento);
-                    return true; // Sucesso na modificação
+                    return true;
                 } else {
                     System.out.println("[MEDICAMENTO] Editado, mas nenhum campo foi modificado (dados iguais). ID: " + this.idMedicamento);
-                    return true; // Consideramos sucesso (o estado desejado foi alcançado)
+                    return true;
                 }
             } else {
                 System.err.println("[MEDICAMENTO] Falha ao editar. Documento não encontrado ou ID do Usuário não corresponde. ID: " + this.idMedicamento);
@@ -126,7 +120,6 @@ public class PedidoDeEditarMedicamento extends ComunicadoJson {
             }
 
         } catch (IllegalArgumentException e) {
-            // Captura erros de formato de ObjectId (ex: "abc" não é um ID válido)
             System.err.println("[ERRO] ID do medicamento em formato inválido: " + e.getMessage() + ". ID recebido: " + this.idMedicamento);
             e.printStackTrace();
         } catch (MongoException e) {

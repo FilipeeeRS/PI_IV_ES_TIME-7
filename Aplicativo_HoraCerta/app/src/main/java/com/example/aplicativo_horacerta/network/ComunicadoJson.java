@@ -3,6 +3,7 @@ package com.example.aplicativo_horacerta.network;
 import com.google.gson.Gson;
 
 public class ComunicadoJson extends Comunicado {
+
     private String operacao;
 
     public ComunicadoJson(String operacao) {

@@ -1,10 +1,9 @@
-package org.example;
-
-
-
+package org.example.domain.result;
 import com.google.gson.Gson;
+import org.example.domain.Usuario;
 
-public class ResultadoLogin extends ResultadoOperacao{
+
+public class ResultadoLogin extends ResultadoOperacao {
     private Usuario usuario;
 
     public ResultadoLogin(boolean resultado, String operacao, Usuario usuario) {

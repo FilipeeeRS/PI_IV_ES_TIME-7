@@ -1,20 +1,26 @@
-package org.example;
+package org.example.domain.result;
 
-public class ResultadoOperacao extends Comunicado {
 
-    // CAMPOS NECESSÁRIOS PARA LOGIN/OUTRAS OPERAÇÕES
+import org.example.protocol.ComunicadoJson;
+
+import java.io.Serializable;
+
+public class ResultadoOperacao extends ComunicadoJson implements Serializable  {
+
+    // CAMPOS NECESSÁRIOS PARA LOGIN/OUTRAS
     private boolean resultado;
     private String operacao;
 
-    // CAMPOS NECESSÁRIOS PARA DELETE/OPERAÇÕES PADRÕES
+    // CAMPOS NECESSÁRIOS PARA DELETE/OPERAÇÕES
     private boolean sucesso;
     private String mensagem;
 
-    public ResultadoOperacao() {}
+    public ResultadoOperacao() {
+        super();
+    }
 
 
-
-    // 2. Construtor Novo (Para o Delete e futuras operações padronizadas)
+    // Construtor Novo (Para o Delete e futuras operações)
     public ResultadoOperacao (boolean sucesso, String mensagem)
     {
         this.sucesso = sucesso;
@@ -24,9 +30,7 @@ public class ResultadoOperacao extends Comunicado {
         this.operacao = mensagem; // Ou uma string de tipo de sucesso/falha
     }
 
-
-
-    // Getters para todos os campos (importante para o GSON, se necessário)
+    // Getters para todos os campos
     public boolean getResultadoOperacao(){
         return resultado;
     }

@@ -48,12 +48,8 @@ import org.json.JSONObject
 
 class FazerRegistroActivity : ComponentActivity() {
     private lateinit var auth: FirebaseAuth
-
-    // Mantenha esta função fora do escopo do ComponentActivity, ou melhor,
-    // defina-a na Activity para que ela possa ser passada para o Composable.
     private fun handleRegistration(nome: String, email: String, senha: String, profileType: String) {
-
-        // 1. CHAMA O FIREBASE AUTH
+        // chama FIREBASE AUTH
         auth.createUserWithEmailAndPassword(email, senha)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
@@ -63,13 +59,11 @@ class FazerRegistroActivity : ComponentActivity() {
                     if (firebaseUid != null) {
                         Toast.makeText(this, "Cadastro no Firebase OK. Enviando dados...", Toast.LENGTH_SHORT).show()
 
-                        // 2. CHAMA A REDE APENAS COM O UID
-                        // Precisamos de um CoroutineScope para chamar a função suspend
+                        // chama a rede com o UID
                         lifecycleScope.launch {
                             // O nome, email e profileType vêm da tela.
-                            // O UID substitui a senha.
                             createAccount(nome.trim(), email.trim(), firebaseUid, profileType) { result ->
-                                // Atualize a mensagem da UI aqui, se possível
+                                // Atualize a mensagem da UI
                                 try {
                                     val jsonExterno = JSONObject(result)
                                     val jsonInternoString = jsonExterno.getString("operacao")
@@ -91,7 +85,6 @@ class FazerRegistroActivity : ComponentActivity() {
                         Toast.makeText(this, "Erro: UID não encontrado.", Toast.LENGTH_LONG).show()
                     }
                 } else {
-                    // 3. ERRO DO FIREBASE
                     Toast.makeText(this, "Falha no Registro: ${task.exception?.message}", Toast.LENGTH_LONG).show()
                 }
             }
@@ -103,11 +96,9 @@ class FazerRegistroActivity : ComponentActivity() {
         setContent {
             Surface(color = Color.Black) {
                 FazerRegistro(
-                    // Passamos a função que lida com o registro inteiro
                     onRegisterAttempt = { nome, email, senha, profileType ->
                         handleRegistration(nome, email, senha, profileType)
                     },
-                    //  onRegisterSuccess = { /* Não é mais necessário, pois a Activity lida com a navegação */ },
                     onBackClick = { finish() }
                 )
             }
@@ -115,7 +106,6 @@ class FazerRegistroActivity : ComponentActivity() {
     }
 }
 
-// Cria a conta
 suspend fun createAccount(
     nome: String,
     email: String,
@@ -123,7 +113,8 @@ suspend fun createAccount(
     profileType: String,
     onResult: (String) -> Unit
 ) {
-    val SERVER_IP = "10.0.2.2"
+    val SERVER_IP = "10.0.116.3"
+    //val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
 
     val pedido = PedidoDeCadastro(nome, email, firebaseUid, profileType)
@@ -153,16 +144,12 @@ suspend fun createAccount(
     }
 }
 
-
-
-
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FazerRegistro(
     onRegisterAttempt: (String, String, String, String) -> Unit,
     onBackClick: () -> Unit = {}
 ) {
-
     // Preview
     val isInPreview = LocalInspectionMode.current
 
@@ -196,7 +183,6 @@ fun FazerRegistro(
         modifier = Modifier.fillMaxSize()
     ) {
 
-        // Fundoa
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -204,7 +190,6 @@ fun FazerRegistro(
             contentScale = ContentScale.Crop
         )
 
-        // Botão de Voltar
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
@@ -228,7 +213,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(50.dp))
 
-            // Logo
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo HoraCerta",
@@ -237,7 +221,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Texto central
             Text(
                 text = "HoraCerta\nFazer Registro",
                 color = Color.White,
@@ -248,7 +231,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(25.dp))
 
-            // Selecionar perfil
             Text(
                 text = "   Tipo de Perfil:",
                 color = Color.White,
@@ -286,7 +268,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Nome
             TextField(
                 value = name,
                 onValueChange = { name = it },
@@ -307,7 +288,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Email
             TextField(
                 value = email,
                 onValueChange = { email = it },
@@ -328,7 +308,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Senha
             TextField(
                 value = password,
                 onValueChange = { password = it },
@@ -359,7 +338,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Campo de Confirmar Senha
             TextField(
                 value = confirmPassword,
                 onValueChange = { confirmPassword = it },
@@ -390,7 +368,6 @@ fun FazerRegistro(
 
             Spacer(modifier = Modifier.height(50.dp))
 
-            // Botão de Registrar
             Button(
                 onClick = {
                     var isValid = true
@@ -424,10 +401,7 @@ fun FazerRegistro(
                     if (isValid) {
                         if (!isInPreview) {
                             val selectedProfile = profileOptions[selectedProfileIndex!!]
-
-                            // ➡️ CHAMA A FUNÇÃO QUE INICIA O PROCESSO FIREBASE/REDE
                             onRegisterAttempt(name.trim(), email.trim(), password, selectedProfile)
-
 
                         } else {
                             message = "Modo Preview: Firebase desativado."
@@ -449,13 +423,11 @@ fun FazerRegistro(
         }
     }
 }
-/*
-@Preview(showSystemUi = true, showBackground = true)
+
+/*@Preview(showSystemUi = true, showBackground = true)
 @Composable
 fun PreviewFazerRegistro() {
     Surface(color = Color.Black) {
         FazerRegistro()
     }
-}
-
- */
+}*/

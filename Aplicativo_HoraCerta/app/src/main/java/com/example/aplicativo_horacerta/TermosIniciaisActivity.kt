@@ -70,7 +70,6 @@ fun TermosTela(
         modifier = Modifier.fillMaxSize()
     ) {
 
-        // Fundo
         Image(
             painter = painterResource(id = R.drawable.ic_launcher_background),
             contentDescription = "Fundo",
@@ -78,7 +77,6 @@ fun TermosTela(
             contentScale = ContentScale.Crop
         )
 
-        // Botão de voltar
         IconButton(
             onClick = onBackClick,
             modifier = Modifier
@@ -97,7 +95,6 @@ fun TermosTela(
 
             Spacer(modifier = Modifier.height(100.dp))
 
-            // Logo
             Image(
                 painter = painterResource(id = R.drawable.ic_launcher_foreground),
                 contentDescription = "Logo HoraCerta",
@@ -172,7 +169,6 @@ O usuário é responsável por fornecer informações verídicas e manter seus d
 O HoraCerta não substitui recomendações médicas. Caso ocorra alguma dúvida sobre tratamento ou medicamento, consulte um profissional de saúde.
 
 Para mais informações, consulte nossa Política de Privacidade.
-
 """.trimIndent()
 }
 

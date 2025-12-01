@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.mongodb.client.MongoClient;
 import com.mongodb.client.MongoClients;
@@ -7,9 +8,7 @@ import com.mongodb.client.MongoDatabase;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
-
-
-
+import org.example.protocol.ComunicadoJson;
 
 public class PedidoDeCriarMedicamento extends ComunicadoJson {
     @SerializedName("nome")
@@ -24,7 +23,7 @@ public class PedidoDeCriarMedicamento extends ComunicadoJson {
     private String idUsuario;
 
     public PedidoDeCriarMedicamento() {
-      super("PedidoDeCriarMedicamento");
+        super("PedidoDeCriarMedicamento");
     }
 
     public String getNome(){ return this.nome ;}
@@ -60,16 +59,13 @@ public class PedidoDeCriarMedicamento extends ComunicadoJson {
                 System.out.println("[MEDICAMENTO] Criado com sucesso para usuario: " + this.idUsuario);
                 return true;
             } catch (com.mongodb.MongoException e) {
-                // Captura erros específicos do MongoDB (conexão, permissão, etc.)
                 System.err.println("Erro ao interagir com o MongoDB: " + e.getMessage());
                 return false;
             }
         } catch (IllegalArgumentException e) {
-            // Captura o erro de validação (campos ausentes)
             System.err.println("Erro de Validação: " + e.getMessage());
             return false;
         } catch (Exception e) {
-            // Captura qualquer outra exceção inesperada (ex: problema ao carregar dotenv)
             e.printStackTrace();
             return false;
         }

@@ -1,4 +1,5 @@
-package org.example;
+package org.example.domain;
+
 
 import com.google.gson.annotations.SerializedName;
 import com.mongodb.client.MongoClient;
@@ -8,13 +9,13 @@ import com.mongodb.client.MongoDatabase;
 import com.mongodb.client.model.Filters;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
+import org.example.protocol.ComunicadoJson;
+
 
 public class PedidoDeLogin extends ComunicadoJson {
 
-
     @SerializedName("login")
     private String email;
-
 
     @SerializedName("firebaseUid")
     private String firebaseUid;
@@ -22,7 +23,6 @@ public class PedidoDeLogin extends ComunicadoJson {
     public PedidoDeLogin() {
         super("Login");
     }
-
 
     public PedidoDeLogin(String email, String firebaseUid) {
         super("Login");
@@ -58,7 +58,6 @@ public class PedidoDeLogin extends ComunicadoJson {
 
             if (doc == null) return null; // e-mail não encontrado
 
-
             String uidBanco = doc.getString("firebase_uid");
 
             if (uidBanco == null || !uidBanco.equals(this.firebaseUid)) {
@@ -67,7 +66,6 @@ public class PedidoDeLogin extends ComunicadoJson {
             }
 
             System.out.println("[LOGIN] Usuário autenticado com sucesso!");
-
 
             return new Usuario(
                     doc.getObjectId("_id").toHexString(),

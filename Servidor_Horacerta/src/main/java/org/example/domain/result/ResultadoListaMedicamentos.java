@@ -1,13 +1,14 @@
-package org.example;
+package org.example.domain.result;
+
+import org.example.domain.Medicamento;
+import org.example.protocol.ComunicadoJson;
 
 import java.util.List;
 
 
 public class ResultadoListaMedicamentos extends ComunicadoJson {
 
-
     private List<Medicamento> medicamentos;
-
 
     public ResultadoListaMedicamentos(List<Medicamento> medicamentos) {
         super("ResultadoListaMedicamentos");

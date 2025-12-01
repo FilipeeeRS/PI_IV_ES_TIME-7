@@ -1,9 +1,12 @@
-package org.example;
+package org.example.domain;
+
 
 import com.google.gson.annotations.SerializedName;
 import com.mongodb.client.*;
 import com.mongodb.client.model.Filters;
 import org.bson.Document;
+import org.example.protocol.ComunicadoJson;
+
 
 public class PedidoBuscarCuidador extends ComunicadoJson {
 
@@ -27,17 +30,17 @@ public class PedidoBuscarCuidador extends ComunicadoJson {
 
             System.out.println("[BUSCA CUIDADOR] Procurando cuidador do idoso: " + emailIdoso);
 
-            // 1. Achar o Idoso pelo email
+            // Acha o Idoso pelo email
             Document docIdoso = col.find(Filters.eq("email", this.emailIdoso)).first();
 
             if (docIdoso != null) {
-                // 2. Pegar o ID do cuidador que está salvo nele
+                // Pegar o ID do cuidador que está salvo nele
                 String uidCuidador = docIdoso.getString("cuidador_responsavel_uid");
 
                 if (uidCuidador != null && !uidCuidador.isEmpty()) {
                     System.out.println("[BUSCA CUIDADOR] UID encontrado: " + uidCuidador);
 
-                    // 3. Buscar o Cuidador pelo UID (firebase_uid)
+                    // Buscar o Cuidador pelo UID (firebase_uid)
                     Document docCuidador = col.find(Filters.eq("firebase_uid", uidCuidador)).first();
 
                     if (docCuidador != null) {

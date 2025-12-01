@@ -49,10 +49,11 @@ class CuidadorConectarIdosoActivity : ComponentActivity() {
     }
 }
 
-
-// Função 1: Apenas busca o nome
+// Busca o nome
 suspend fun buscarIdosoViaSocket(email: String, onResult: (Boolean, String?) -> Unit) {
-    val SERVER_IP = "10.0.2.2"
+
+    val SERVER_IP = "10.0.116.3"
+    //val SERVER_IP = "10.0.2.2"
     val SERVER_PORT = 3000
     val gson = Gson()
 
@@ -68,10 +69,9 @@ suspend fun buscarIdosoViaSocket(email: String, onResult: (Boolean, String?) -> 
             // Manda pedido de busca
             servidor.receba(PedidoBuscarIdoso(email))
 
-
             val jsonString = servidor.envieJson()
 
-            // Agora converte o texto completo para o objeto certo
+            // Converte o texto para o objeto certo
             val resultado = gson.fromJson(jsonString, ResultadoBuscaIdoso::class.java)
 
             withContext(Dispatchers.Main) {
@@ -105,8 +105,7 @@ suspend fun confirmarConexaoViaSocket(emailIdoso: String, onResult: (Boolean, St
 
             servidor.receba(PedidoDeConexao(emailCuidador, emailIdoso))
 
-
-            // Usamos envieJson() para pegar o texto BRUTO e não perder dados
+            // envieJson() pegar o texto BRUTO e não perder dados
             val jsonString = servidor.envieJson()
 
             val resultado = gson.fromJson(jsonString, ResultadoOperacao::class.java)
@@ -123,13 +122,10 @@ suspend fun confirmarConexaoViaSocket(emailIdoso: String, onResult: (Boolean, St
     }
 }
 
-// --- TELA ---
-
 @Composable
 fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
     var emailIdoso by remember { mutableStateOf("") }
 
-    // Estados novos para controlar o fluxo
     var nomeEncontrado by remember { mutableStateOf<String?>(null) }
     var showConfirmacao by remember { mutableStateOf(false) }
 
@@ -138,7 +134,7 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
     var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
-        topBar = { /* ... Seu cabeçalho original ... */
+        topBar = {
             Column {
                 Box(modifier = Modifier.fillMaxWidth().height(130.dp)) {
                     Image(
@@ -196,7 +192,6 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                     Text("ADICIONAR IDOSO", fontWeight = FontWeight.Bold, fontSize = 18.sp, color = Color.Black)
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // SE AINDA NÃO ACHOU O NOME, MOSTRA O CAMPO DE BUSCA
                     if (!showConfirmacao) {
                         TextField(
                             value = emailIdoso,
@@ -218,7 +213,6 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                         buscarIdosoViaSocket(emailIdoso) { encontrou, nome ->
                                             isLoading = false
                                             if (encontrou && nome != null) {
-                                                // LÓGICA NOVA AQUI
                                                 if (nome.contains("(JÁ POSSUI CUIDADOR)")) {
                                                     Toast.makeText(context, "Este idoso já está sendo monitorado por alguém!", Toast.LENGTH_LONG).show()
                                                 } else {
@@ -242,7 +236,7 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                             else Text("Buscar", fontSize = 18.sp)
                         }
                     } else {
-                        // SE JÁ ACHOU, MOSTRA A CONFIRMAÇÃO
+                        // Confirmação
                         Text(
                             "Encontramos:",
                             fontSize = 14.sp, color = Color.Gray
@@ -260,7 +254,6 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                         Spacer(modifier = Modifier.height(24.dp))
 
                         Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            // Botão Cancelar
                             Button(
                                 onClick = {
                                     showConfirmacao = false
@@ -271,8 +264,6 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                             ) {
                                 Text("Cancelar")
                             }
-
-                            // Botão Confirmar
                             Button(
                                 onClick = {
                                     isLoading = true
@@ -281,7 +272,7 @@ fun CuidadorConectarIdosoScreen(onBackClick: () -> Unit) {
                                             isLoading = false
                                             Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
                                             if (sucesso) {
-                                                onBackClick() // Sai da tela
+                                                onBackClick()
                                             }
                                         }
                                     }

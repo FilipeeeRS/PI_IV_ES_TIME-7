@@ -1,6 +1,7 @@
-package org.example;
+package org.example.domain.result;
 
 import com.google.gson.annotations.SerializedName;
+import org.example.protocol.ComunicadoJson;
 
 public class ResultadoBuscaIdoso extends ComunicadoJson {
 

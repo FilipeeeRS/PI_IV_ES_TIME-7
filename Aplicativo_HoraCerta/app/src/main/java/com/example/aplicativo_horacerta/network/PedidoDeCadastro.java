@@ -1,6 +1,6 @@
 package com.example.aplicativo_horacerta.network;
 
-import com.google.gson.annotations.SerializedName; // <--- NOVA IMPORTAÇÃO
+import com.google.gson.annotations.SerializedName;
 
 public class PedidoDeCadastro extends ComunicadoJson {
     private static final long serialVersionUID = 1L;

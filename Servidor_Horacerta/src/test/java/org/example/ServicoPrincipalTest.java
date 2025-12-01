@@ -1,5 +1,6 @@
 package org.example;
 
+import org.example.domain.Medicamento;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
@@ -8,6 +9,7 @@ import org.mockito.MockitoAnnotations;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
+
 
 // Classe fictícia para simular a dependência de persistência
 class GerenciadorMed {
