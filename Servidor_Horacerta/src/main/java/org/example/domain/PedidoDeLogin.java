@@ -10,6 +10,7 @@ import com.mongodb.client.model.Filters;
 import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import org.example.protocol.ComunicadoJson;
+import java.util.Objects;
 
 
 public class PedidoDeLogin extends ComunicadoJson {
@@ -78,14 +79,36 @@ public class PedidoDeLogin extends ComunicadoJson {
             e.printStackTrace();
             return null;
         }
+
     }
 
     @Override
     public String toString() {
-        return "Login de: " + this.email;
+        // Útil para logs: mostra o email e o UID (o ID do Firebase)
+        return "PedidoDeLogin [Tipo: " + getTipo() +
+                ", Email: " + this.email +
+                ", UID: " + this.firebaseUid + "]";
     }
 
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    @Override
+    public int hashCode() {
+        // Hash baseado nos campos que definem o pedido: email e firebaseUid.
+        return Objects.hash(email, firebaseUid);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+        if (obj == null || getClass() != obj.getClass()) return false;
+
+        PedidoDeLogin other = (PedidoDeLogin) obj;
+
+        // Compara os campos de dados email e firebaseUid
+        return Objects.equals(email, other.email) &&
+                Objects.equals(firebaseUid, other.firebaseUid);
     }
 }

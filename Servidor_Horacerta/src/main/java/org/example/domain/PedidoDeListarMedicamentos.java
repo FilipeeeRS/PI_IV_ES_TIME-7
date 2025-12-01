@@ -10,7 +10,7 @@ import com.mongodb.client.model.Filters;
 import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
 import org.example.protocol.ComunicadoJson;
-
+import java.util.Objects;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,6 +21,12 @@ public class PedidoDeListarMedicamentos extends ComunicadoJson {
 
     public PedidoDeListarMedicamentos() {
         super("PedidoDeListarMedicamentos");
+    }
+
+    public PedidoDeListarMedicamentos(PedidoDeListarMedicamentos outro) {
+        super(outro.getTipo());
+
+        this.idUsuario = outro.idUsuario;
     }
 
     public String getIdUsuario() {
@@ -73,5 +79,31 @@ public class PedidoDeListarMedicamentos extends ComunicadoJson {
 
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    @Override
+    public int hashCode() {
+        // Combina o hash do pai com o hash do campo de dados.
+        return Objects.hash(super.hashCode(), idUsuario);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        // Compara o pai primeiro
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoDeListarMedicamentos other = (PedidoDeListarMedicamentos) obj;
+
+        // Compara o campo chave.
+        return Objects.equals(idUsuario, other.idUsuario);
+    }
+
+    @Override
+    public String toString() {
+        return "PedidoDeListarMedicamentos [ID Usuário: " + idUsuario + "]";
     }
 }

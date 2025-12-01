@@ -6,7 +6,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import com.mongodb.client.*;
 import org.bson.Document;
 import org.example.protocol.ComunicadoJson;
-
+import java.util.Objects;
 
 public class PedidoDeCadastro extends ComunicadoJson {
 
@@ -82,9 +82,40 @@ public class PedidoDeCadastro extends ComunicadoJson {
             e.printStackTrace();
             return false;
         }
+
     }
 
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
+    }
+
+    @Override
+    public int hashCode() {
+        // Combina o hash do pai com os hash dos quatro campos.
+        return Objects.hash(super.hashCode(), nome, email, firebaseUid, profileType);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        // Compara o pai primeiro
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoDeCadastro other = (PedidoDeCadastro) obj;
+
+        // Compara todos os quatro campos de dados.
+        return Objects.equals(nome, other.nome) &&
+                Objects.equals(email, other.email) &&
+                Objects.equals(firebaseUid, other.firebaseUid) &&
+                Objects.equals(profileType, other.profileType);
+    }
+
+    @Override
+    public String toString() {
+        // Representação clara para logs. Evita mostrar o UID completo.
+        return "PedidoDeCadastro [Perfil: " + profileType + ", Email: " + email + ", Nome: " + nome + "]";
     }
 }

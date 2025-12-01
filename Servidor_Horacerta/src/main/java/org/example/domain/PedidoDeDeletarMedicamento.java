@@ -11,7 +11,7 @@ import org.bson.Document;
 import org.bson.types.ObjectId;
 import org.example.domain.result.ResultadoOperacao;
 import org.example.protocol.ComunicadoJson;
-
+import java.util.Objects;
 import static com.mongodb.client.model.Filters.and;
 import static com.mongodb.client.model.Filters.eq;
 
@@ -22,6 +22,16 @@ public class PedidoDeDeletarMedicamento extends ComunicadoJson {
     private String idUsuario;
     public PedidoDeDeletarMedicamento() {
         super("PedidoDeDeletarMedicamento");
+    }
+
+    // Construtor de copia
+    public PedidoDeDeletarMedicamento(PedidoDeDeletarMedicamento outro) {
+        // 1. Chama o construtor do pai (ComunicadoJson)
+        super(outro.getTipo());
+
+        // 2. Copia os campos chaves
+        this.id = outro.id;
+        this.idUsuario = outro.idUsuario;
     }
 
     public boolean executar() {
@@ -62,5 +72,32 @@ public class PedidoDeDeletarMedicamento extends ComunicadoJson {
             e.printStackTrace();
             return new ResultadoOperacao(false, "Erro interno inesperado: " + e.getMessage()).getSucesso();
         }
+    }
+
+    @Override
+    public int hashCode() {
+        // Combina o hash do pai com os hash dos dois campos chaves.
+        return Objects.hash(super.hashCode(), id, idUsuario);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        // Compara o pai primeiro
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoDeDeletarMedicamento other = (PedidoDeDeletarMedicamento) obj;
+
+        // Compara os campos chaves.
+        return Objects.equals(id, other.id) &&
+                Objects.equals(idUsuario, other.idUsuario);
+    }
+
+    @Override
+    public String toString() {
+        return "PedidoDeDeletarMedicamento [ID Medicamento: " + id + ", Usuário ID: " + idUsuario + "]";
     }
 }

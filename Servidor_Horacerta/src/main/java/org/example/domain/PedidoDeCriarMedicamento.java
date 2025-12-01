@@ -9,6 +9,7 @@ import io.github.cdimascio.dotenv.Dotenv;
 import org.bson.Document;
 import com.google.gson.annotations.SerializedName;
 import org.example.protocol.ComunicadoJson;
+import java.util.Objects;
 
 public class PedidoDeCriarMedicamento extends ComunicadoJson {
     @SerializedName("nome")
@@ -73,4 +74,48 @@ public class PedidoDeCriarMedicamento extends ComunicadoJson {
     private static boolean isBlank(String s) {
         return s == null || s.isBlank();
     }
+
+    // Construtor de copia
+    public PedidoDeCriarMedicamento(PedidoDeCriarMedicamento outro) {
+        // 1. Chama o construtor do pai (ComunicadoJson)
+        super(outro.getTipo());
+
+        // 2. Copia todos os campos
+        this.nome = outro.nome;
+        this.dia = outro.dia;
+        this.horario = outro.horario;
+        this.descricao = outro.descricao;
+        this.idUsuario = outro.idUsuario;
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(super.hashCode(), nome, dia, horario, descricao, idUsuario);
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (this == obj) return true;
+
+        // Compara o pai primeiro
+        if (!super.equals(obj)) return false;
+
+        if (getClass() != obj.getClass()) return false;
+
+        PedidoDeCriarMedicamento other = (PedidoDeCriarMedicamento) obj;
+
+        // Compara todos os cinco campos de dados.
+        return Objects.equals(nome, other.nome) &&
+                Objects.equals(dia, other.dia) &&
+                Objects.equals(horario, other.horario) &&
+                Objects.equals(descricao, other.descricao) &&
+                Objects.equals(idUsuario, other.idUsuario);
+    }
+
+    @Override
+    public String toString() {
+        return "PedidoDeCriarMedicamento [Nome: " + nome + ", Dia/Hora: " + dia + " @ " + horario + ", Usuário ID: " + idUsuario + "]";
+    }
+
+
 }
